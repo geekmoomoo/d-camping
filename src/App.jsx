@@ -103,8 +103,10 @@ function App() {
           <Footer />
         </>
       )}
+      
     </div>
   );
+  
 }
 
 /* =========================
@@ -2274,6 +2276,10 @@ function AgreeItem({ label, checked, onToggle }) {
     </li>
   );
 }
+
+
+
+
 
 /* =========================
    Footer
