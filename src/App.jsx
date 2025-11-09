@@ -1,14 +1,12 @@
 import React, { useState, useEffect, useRef } from "react";
 import "./index.css";
-import SiteDetailPage from "./pages/SiteDetailPage";
-
 
 /* =========================
    Root App
    ========================= */
 
 function App() {
-  // step: home -> select-site -> site-detail
+  // step: home -> select-site -> site-detail -> confirm
   const [step, setStep] = useState("home");
   const [quickData, setQuickData] = useState(null);
   const [selectedSite, setSelectedSite] = useState(null);
@@ -18,17 +16,30 @@ function App() {
     setSelectedSite(null);
   };
 
-  // 빠른 예약 완료 → 사이트 선택 단계로
+  // 홈 빠른예약 → 사이트 선택
   const handleQuickNext = (payload) => {
     setQuickData(payload);
     setSelectedSite(null);
     setStep("select-site");
   };
 
-  // 사이트 카드 선택 → 상세 페이지로
+  // 사이트 카드 선택 → 상세
   const handleSiteSelect = (site) => {
     setSelectedSite(site);
     setStep("site-detail");
+  };
+
+  // 상세 하단 "예약하기" → 예약확정 페이지
+  const handleGoConfirm = () => {
+    setStep("confirm");
+  };
+
+  // 상세에서 날짜 변경 시 상위 상태도 갱신
+  const handleUpdateDatesFromDetail = (partial) => {
+    setQuickData((prev) => ({
+      ...(prev || {}),
+      ...partial,
+    }));
   };
 
   const headerTitle = getHeaderTitle(step, quickData, selectedSite);
@@ -40,6 +51,8 @@ function App() {
     } else if (step === "site-detail") {
       setStep("select-site");
       setSelectedSite(null);
+    } else if (step === "confirm") {
+      setStep("site-detail");
     } else {
       goHome();
     }
@@ -76,7 +89,15 @@ function App() {
               />
             )}
             {step === "site-detail" && (
-              <ReserveStep data={quickData} site={selectedSite} />
+              <ReserveStep
+                data={quickData}
+                site={selectedSite}
+                onReserve={handleGoConfirm}
+                onUpdateDates={handleUpdateDatesFromDetail}
+              />
+            )}
+            {step === "confirm" && (
+              <ConfirmReservePage quickData={quickData} site={selectedSite} />
             )}
           </main>
           <Footer />
@@ -108,10 +129,12 @@ function getHeaderTitle(step, quickData, selectedSite) {
   }
 
   if (step === "site-detail") {
-    if (selectedSite?.name) {
-      return selectedSite.name;
-    }
+    if (selectedSite?.name) return selectedSite.name;
     return `${typeLabel} 사이트 상세`;
+  }
+
+  if (step === "confirm") {
+    return "예약하기";
   }
 
   return "예약 단계";
@@ -140,6 +163,7 @@ const compareISO = (a, b) => {
 
 const addDaysISO = (iso, days) => {
   const d = parseISO(iso);
+  if (!d) return iso;
   d.setDate(d.getDate() + days);
   return toISO(d);
 };
@@ -147,7 +171,8 @@ const addDaysISO = (iso, days) => {
 const diffDays = (aISO, bISO) => {
   const a = parseISO(aISO);
   const b = parseISO(bISO);
-  return (b - a) / (1000 * 60 * 60 * 24);
+  if (!a || !b) return 0;
+  return Math.round((b - a) / (1000 * 60 * 60 * 24));
 };
 
 const formatDateLabel = (iso) => {
@@ -198,7 +223,13 @@ function StepHeader({ title, onBack, onHome }) {
    ========================= */
 
 function HeroCarousel() {
-  const images = ["banners/banner1.jpg", "banners/banner2.jpg", "banners/banner3.jpg", "banners/banner4.jpg", "banners/banner5.jpg"];
+  const images = [
+    "banners/banner1.jpg",
+    "banners/banner2.jpg",
+    "banners/banner3.jpg",
+    "banners/banner4.jpg",
+    "banners/banner5.jpg",
+  ];
   const total = images.length;
   const extended = [images[total - 1], ...images, images[0]];
 
@@ -460,11 +491,14 @@ function QuickReserveBox({ onNext }) {
 
   const handleDateClick = (iso) => {
     if (!iso) return;
-
     const todayISO = toISO(today);
 
     if (!selectingCheckOut) {
-      if (compareISO(iso, todayISO) < 0 || compareISO(iso, maxCheckInISO) > 0) return;
+      if (
+        compareISO(iso, todayISO) < 0 ||
+        compareISO(iso, maxCheckInISO) > 0
+      )
+        return;
       setCheckIn(iso);
       setCheckOut("");
       setError("");
@@ -557,7 +591,7 @@ function QuickReserveBox({ onNext }) {
       setDDay(null);
       return;
     }
-    const diff = (d - today) / (1000 * 60 * 60 * 24);
+    const diff = diffDays(toISO(today), checkIn);
     setDDay(diff >= 0 ? diff : null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [checkIn]);
@@ -577,8 +611,8 @@ function QuickReserveBox({ onNext }) {
 
   return (
     <>
-      <form className="dc-qb dc-qb-quick" onSubmit={handleSubmit} id="quick">
-        <div className="dc-qb-header">
+      <form className="dc-qb dc-qb-quick" onSubmit={handleSubmit}>
+        <div className="dc-qb-header dc-qb-header-green">
           <div className="dc-qb-title">⚡ 빠른 예약</div>
         </div>
 
@@ -668,7 +702,6 @@ function QuickReserveBox({ onNext }) {
         </p>
       </form>
 
-      {/* 날짜 시트 */}
       {isDateSheetOpen && (
         <>
           <div className="dc-qb-sheet-backdrop" onClick={closeSheets} />
@@ -685,7 +718,9 @@ function QuickReserveBox({ onNext }) {
                 {checkIn ? `입실일 ${formatDateLabel(checkIn)}` : "입실일 선택"}
               </div>
               <div className="active">
-                {checkOut ? `퇴실일 ${formatDateLabel(checkOut)}` : "퇴실일 선택"}
+                {checkOut
+                  ? `퇴실일 ${formatDateLabel(checkOut)}`
+                  : "퇴실일 선택"}
               </div>
             </div>
 
@@ -712,7 +747,6 @@ function QuickReserveBox({ onNext }) {
         </>
       )}
 
-      {/* 인원 시트 */}
       {isPeopleSheetOpen && (
         <>
           <div className="dc-qb-sheet-backdrop" onClick={closeSheets} />
@@ -729,17 +763,11 @@ function QuickReserveBox({ onNext }) {
             <div className="dc-qb-people-row">
               <span>인원</span>
               <div className="dc-qb-people-ctrl">
-                <button
-                  type="button"
-                  onClick={() => handlePeopleChange(-1)}
-                >
+                <button type="button" onClick={() => handlePeopleChange(-1)}>
                   -
                 </button>
                 <span>{people}</span>
-                <button
-                  type="button"
-                  onClick={() => handlePeopleChange(1)}
-                >
+                <button type="button" onClick={() => handlePeopleChange(1)}>
                   +
                 </button>
               </div>
@@ -758,7 +786,7 @@ function QuickReserveBox({ onNext }) {
   );
 }
 
-/* 공통 Calendar Grid 컴포넌트 (홈/사이트선택에서 동일 스타일) */
+/* 공통 Calendar Grid */
 
 function CalendarGrid({
   cells,
@@ -794,9 +822,7 @@ function CalendarGrid({
       <div className="dc-qb-cal-grid">
         {cells.map((iso, idx) => {
           if (!iso) {
-            return (
-              <div key={idx} className="dc-qb-cal-cell empty" />
-            );
+            return <div key={idx} className="dc-qb-cal-cell empty" />;
           }
 
           let disabled = false;
@@ -861,15 +887,15 @@ function CalendarGrid({
 
 /* 유형 버튼 */
 
-function TypeButton({ label, value, siteType, setSiteType }) {
+function TypeButton({ label, value, siteType, setSiteType, variant }) {
   const active = siteType === value;
   const toggle = () => setSiteType(active ? "all" : value);
+  const baseClass =
+    "dc-qb-type-btn" +
+    (active ? " active" : "") +
+    (variant === "blue" ? " blue" : "");
   return (
-    <button
-      type="button"
-      className={"dc-qb-type-btn" + (active ? " active" : "")}
-      onClick={toggle}
-    >
+    <button type="button" className={baseClass} onClick={toggle}>
       {label}
     </button>
   );
@@ -914,14 +940,16 @@ function MapReserveBox() {
   const currentZones = siteType !== "all" ? zoneOptions[siteType] || [] : [];
 
   return (
-    <form className="dc-qb dc-qb-map" id="map" onSubmit={handleSubmit}>
-      <div className="dc-qb-header">
+    <form className="dc-qb dc-qb-map" onSubmit={handleSubmit}>
+      <div className="dc-qb-header dc-qb-header-blue">
         <div className="dc-qb-title dc-qb-map-title">🗺️ 지도에서 선택</div>
       </div>
 
       <div className="dc-qb-type-label">
         이용 유형
-        <span className="dc-qb-type-tip">(타입 선택 후, 지도에서 구역 선택)</span>
+        <span className="dc-qb-type-tip">
+          (타입 선택 후, 지도에서 구역 선택)
+        </span>
       </div>
       <div className="dc-qb-type-grid">
         <TypeButton
@@ -929,24 +957,28 @@ function MapReserveBox() {
           value="self-caravan"
           siteType={siteType}
           setSiteType={setSiteType}
+          variant="blue"
         />
         <TypeButton
           label="카바나 데크"
           value="cabana-deck"
           siteType={siteType}
           setSiteType={setSiteType}
+          variant="blue"
         />
         <TypeButton
           label="텐트 사이트"
           value="tent"
           siteType={siteType}
           setSiteType={setSiteType}
+          variant="blue"
         />
         <TypeButton
           label="숙박 시설"
           value="lodging"
           siteType={siteType}
           setSiteType={setSiteType}
+          variant="blue"
         />
       </div>
 
@@ -962,7 +994,9 @@ function MapReserveBox() {
               {currentZones.map((z) => (
                 <label
                   key={z}
-                  className={"dc-map-zone" + (zone === z ? " active" : "")}
+                  className={
+                    "dc-map-zone" + (zone === z ? " active" : "")
+                  }
                 >
                   <input
                     type="radio"
@@ -982,7 +1016,7 @@ function MapReserveBox() {
       <div className="dc-qb-actions dc-qb-actions-full">
         <button
           type="submit"
-          className="dc-btn-primary dc-btn-map"
+          className="dc-btn-primary dc-btn-map-primary"
         >
           다음 단계로 진행
         </button>
@@ -1006,7 +1040,7 @@ function MapReserveBox() {
 
 function FeatureSection() {
   return (
-    <section className="dc-section" id="guide">
+    <section className="dc-section">
       <h2>이 캠핑장에서 누릴 수 있는 것들</h2>
       <div className="dc-cat-grid">
         <div className="dc-cat-item">
@@ -1118,7 +1152,10 @@ function SiteSelectStep({ data, onChangeFilter, onSelectSite }) {
     const todayISO = toISO(today);
 
     if (!selectingCheckOut) {
-      if (compareISO(iso, todayISO) < 0 || compareISO(iso, maxCheckInISO) > 0)
+      if (
+        compareISO(iso, todayISO) < 0 ||
+        compareISO(iso, maxCheckInISO) > 0
+      )
         return;
       setCheckIn(iso);
       setCheckOut("");
@@ -1161,7 +1198,6 @@ function SiteSelectStep({ data, onChangeFilter, onSelectSite }) {
   while (cells.length % 7 !== 0) cells.push(null);
   while (cells.length < 42) cells.push(null);
 
-  // 더미 사이트 데이터
   const sites = [
     {
       id: "A1",
@@ -1292,7 +1328,6 @@ function SiteSelectStep({ data, onChangeFilter, onSelectSite }) {
 
   return (
     <section className="dc-step-card dc-site-list-wrap">
-      {/* 상단: 날짜/인원 재선택 바 */}
       <div className="dc-qb-bar-row dc-site-filter-bar">
         <button
           type="button"
@@ -1317,7 +1352,6 @@ function SiteSelectStep({ data, onChangeFilter, onSelectSite }) {
         </button>
       </div>
 
-      {/* 사이트 카드 목록 */}
       <div className="dc-site-list">
         {filteredSites.map((site) => (
           <div key={site.id} className="dc-site-card">
@@ -1387,7 +1421,6 @@ function SiteSelectStep({ data, onChangeFilter, onSelectSite }) {
         ))}
       </div>
 
-      {/* 날짜/인원 시트 (사이트 선택) */}
       {isDateSheetOpen && (
         <>
           <div className="dc-qb-sheet-backdrop" onClick={closeSheets} />
@@ -1404,7 +1437,9 @@ function SiteSelectStep({ data, onChangeFilter, onSelectSite }) {
                 {checkIn ? `입실일 ${formatDateLabel(checkIn)}` : "입실일 선택"}
               </div>
               <div className="active">
-                {checkOut ? `퇴실일 ${formatDateLabel(checkOut)}` : "퇴실일 선택"}
+                {checkOut
+                  ? `퇴실일 ${formatDateLabel(checkOut)}`
+                  : "퇴실일 선택"}
               </div>
             </div>
 
@@ -1447,17 +1482,11 @@ function SiteSelectStep({ data, onChangeFilter, onSelectSite }) {
             <div className="dc-qb-people-row">
               <span>인원</span>
               <div className="dc-qb-people-ctrl">
-                <button
-                  type="button"
-                  onClick={() => handlePeopleChange(-1)}
-                >
+                <button type="button" onClick={() => handlePeopleChange(-1)}>
                   -
                 </button>
                 <span>{people}</span>
-                <button
-                  type="button"
-                  onClick={() => handlePeopleChange(1)}
-                >
+                <button type="button" onClick={() => handlePeopleChange(1)}>
                   +
                 </button>
               </div>
@@ -1480,8 +1509,8 @@ function SiteSelectStep({ data, onChangeFilter, onSelectSite }) {
    Site Detail Step
    ========================= */
 
-function ReserveStep({ data, site }) {
-  const metaTitle = site?.name || "*A3* 캠핑사이트 / 차박가능";
+function ReserveStep({ data, site, onReserve, onUpdateDates }) {
+  const metaTitle = site?.name || "카바나 데크";
 
   const images = [
     "/site_img/site_001.jpg",
@@ -1490,218 +1519,345 @@ function ReserveStep({ data, site }) {
     "/site_img/site_004.jpg",
   ];
 
-  // ▼ 취소수수료 안내 펼침/접힘 상태
-  const [openCancelInfo, setOpenCancelInfo] = useState(false);
+  const [checkIn, setCheckIn] = useState(data?.checkIn || "");
+  const [checkOut, setCheckOut] = useState(data?.checkOut || "");
+  const [people] = useState(data?.people || 2);
+
+  const [isDateSheetOpen, setIsDateSheetOpen] = useState(false);
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const maxCheckInDate = new Date(today);
+  maxCheckInDate.setMonth(maxCheckInDate.getMonth() + 1);
+  const maxCheckInISO = toISO(maxCheckInDate);
+
+  const [calYear, setCalYear] = useState(today.getFullYear());
+  const [calMonth, setCalMonth] = useState(today.getMonth());
+  const selectingCheckOut = !!checkIn && !checkOut;
+
+  useEffect(() => {
+    if (onUpdateDates) onUpdateDates({ checkIn, checkOut });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [checkIn, checkOut]);
+
+  const daysInMonth = (y, m) => new Date(y, m + 1, 0).getDate();
+
+  const handleMonthChange = (delta) => {
+    let y = calYear;
+    let m = calMonth + delta;
+    if (m < 0) {
+      m = 11;
+      y -= 1;
+    } else if (m > 11) {
+      m = 0;
+      y += 1;
+    }
+    setCalYear(y);
+    setCalMonth(m);
+  };
+
+  const openDateSheet = () => {
+    const base = parseISO(checkIn) || today;
+    setCalYear(base.getFullYear());
+    setCalMonth(base.getMonth());
+    setIsDateSheetOpen(true);
+  };
+
+  const closeDateSheet = () => setIsDateSheetOpen(false);
+
+  const handleDateClick = (iso) => {
+    if (!iso) return;
+    const todayISO = toISO(today);
+
+    if (!selectingCheckOut) {
+      if (
+        compareISO(iso, todayISO) < 0 ||
+        compareISO(iso, maxCheckInISO) > 0
+      )
+        return;
+      setCheckIn(iso);
+      setCheckOut("");
+      return;
+    }
+
+    if (compareISO(iso, checkIn) <= 0) return;
+    const nights = diffDays(checkIn, iso);
+    if (nights < 1 || nights > 10) return;
+    setCheckOut(iso);
+  };
+
+  const handleDateConfirm = () => {
+    if (checkIn && checkOut) {
+      closeDateSheet();
+    }
+  };
+
+  const monthLabel = `${calYear}년 ${calMonth + 1}월`;
+  const firstDay = new Date(calYear, calMonth, 1);
+  const firstWeekday = firstDay.getDay();
+  const totalDays = daysInMonth(calYear, calMonth);
+
+  const cells = [];
+  for (let i = 0; i < firstWeekday; i++) cells.push(null);
+  for (let d = 1; d <= totalDays; d++) {
+    cells.push(toISO(new Date(calYear, calMonth, d)));
+  }
+  while (cells.length % 7 !== 0) cells.push(null);
+  while (cells.length < 42) cells.push(null);
+
+  const rangeText =
+    checkIn && checkOut
+      ? `${formatDateLabel(checkIn)} ~ ${formatDateLabel(checkOut)}`
+      : "입실/퇴실일을 선택해주세요";
+
+  const handleReserveClick = () => {
+    if (!checkIn || !checkOut) {
+      alert("입실일과 퇴실일을 먼저 선택해주세요.");
+      return;
+    }
+    if (typeof onReserve === "function") onReserve();
+  };
 
   return (
-    <section className="dc-step-card-site">
-      <SiteImageCarousel images={images} />
-      <div className="dc-site-info-block">
-        <div className="dc-site-title">{metaTitle}</div>
-        <div className="dc-site-subrow">
-          <span className="dc-site-pill">캠핑</span>
-          <span className="dc-site-time">입실 13:00 - 퇴실 11:00</span>
-        </div>
-        <div className="dc-site-people">
-          <span className="dc-site-people-icon">👤</span>
-          기준 4인 / 최대 5인
-        </div>
-        <div className="dc-site-manners">
-          <div className="dc-site-manner-box">
-            <span className="dc-site-manner-label">매너타임 시작</span>
-            <strong>22:30</strong>
+    <>
+      <section className="dc-step-card dc-step-card-site">
+        <SiteImageCarousel images={images} />
+
+        <div className="dc-site-info-block">
+          <div className="dc-site-title">{metaTitle}</div>
+          <div className="dc-site-subrow">
+            <span className="dc-site-pill">카바나 데크</span>
+            <span className="dc-site-time">입실 13:00 - 퇴실 11:00</span>
           </div>
-          <div className="dc-site-manner-box">
-            <span className="dc-site-manner-label">매너타임 종료</span>
-            <strong>07:00</strong>
+          <div className="dc-site-people">
+            <span className="dc-site-people-icon">👤</span>
+            기준 4인 / 최대 5인
+          </div>
+          <div className="dc-site-manners">
+            <div className="dc-site-manner-box">
+              <span className="dc-site-manner-label">매너타임 시작</span>
+              <strong>22:30</strong>
+            </div>
+            <div className="dc-site-manner-box">
+              <span className="dc-site-manner-label">매너타임 종료</span>
+              <strong>07:00</strong>
+            </div>
           </div>
         </div>
-      </div>
 
-      {data && (
-        <div className="dc-step-summary single-line">
-          <span className="summary-item">
-            <strong>입실일</strong> {data.checkIn}
-          </span>
-          <span className="summary-dot">·</span>
-          <span className="summary-item">
-            <strong>퇴실일</strong> {data.checkOut}
-          </span>
-          <span className="summary-dot">·</span>
-          <span className="summary-item">
-            <strong>인원</strong> {data.people}명
-          </span>
-        </div>
-      )}
-
-      {/* 상품소개 */}
-      <div className="dc-site-desc">
-        <h3 className="dc-site-desc-title">상품소개</h3>
-        <ul className="dc-site-desc-list">
-          <li>
-            * 22년도 수영장 오픈은 7월 20일 예정입니다. 오픈 일자는 업체 사정에 따라
-            변동될 수 있습니다.
-          </li>
-          <li>기준 인원 4인, 최대 인원 5인</li>
-        </ul>
-
-        <div className="dc-site-desc-subtitle">[예약방법안내]</div>
-        <ul className="dc-site-desc-list">
-          <li>입실일과 퇴실일을 클릭하시면 됩니다.</li>
-          <li>
-            예시) 8월 1일, 8월 2일, 8월 3일, 8월 4일 (3박4일) → 예약 캘린더에서
-            8/1(입실일), 8/4(퇴실일) 선택
-          </li>
-        </ul>
-
-        <ul className="dc-site-desc-list">
-          <li>시설상태 : 전기, 온수, 배수 양호, 화로대 사용 (전구역 자갈 양호)</li>
-          <li>
-            부대시설 : 펜션 1개동, 관리동(화장실 남/여, 샤워실 남/여, 개수대), 농구대,
-            잔디마당, 야외 수영장
-          </li>
-        </ul>
-      </div>
-
-      {/* 알립니다 */}
-      <div className="dc-site-notice">
-        <h3 className="dc-site-notice-title">알립니다</h3>
-
-        <div className="dc-site-notice-alert">
-          알림티를 읽지 않고 발생하는 불이익에 대해 책임지지 않습니다.
-        </div>
-
-        <ul className="dc-site-notice-list">
-          <li>기준인원 4인 가족 외 추가 1인당 10,000원 (다둥이 가족 제외)</li>
-          <li>여름 성수기 텐트측 에어컨 설치용 전기요금 별도 발생합니다.</li>
-          <li>카라반 예약 시 사전 연락 필수 (카라반 1박당 1만원 추가 요금 발생·현장결제)</li>
-          <li>예약되지 않은 추가 인원 및 차량 현장입장 불가</li>
-          <li>입실 13시 / 퇴실 12시</li>
-          <li>환불규정 및 자세한 사항은 홈페이지를 참고해주세요.</li>
-        </ul>
-      </div>
-
-      {/* 취소 수수료 안내 (접이식) */}
-      <div className="dc-site-cancel">
-        <button
-          type="button"
-          className={
-            "dc-cancel-toggle" + (openCancelInfo ? " open" : "")
-          }
-          onClick={() => setOpenCancelInfo((v) => !v)}
-        >
-          <span>취소수수료 안내</span>
-          <span className="dc-cancel-icon">{openCancelInfo ? "▴" : "▾"}</span>
-        </button>
-
-        {openCancelInfo && (
-          <div className="dc-cancel-body">
-            <table className="dc-cancel-table">
-              <thead>
-                <tr>
-                  <th>취소 기준</th>
-                  <th>취소 수수료율</th>
-                  <th>환불률</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>이용일 7일 전</td>
-                  <td>수수료 없음</td>
-                  <td>전액 환불</td>
-                </tr>
-                <tr>
-                  <td>이용일 6일 전</td>
-                  <td>50%</td>
-                  <td>50%</td>
-                </tr>
-                <tr>
-                  <td>이용일 5일 전</td>
-                  <td>50%</td>
-                  <td>50%</td>
-                </tr>
-                <tr>
-                  <td>이용일 4일 전</td>
-                  <td>50%</td>
-                  <td>50%</td>
-                </tr>
-                <tr>
-                  <td>이용일 3일 전</td>
-                  <td>50%</td>
-                  <td>50%</td>
-                </tr>
-                <tr>
-                  <td>이용일 2일 전</td>
-                  <td>70%</td>
-                  <td>30%</td>
-                </tr>
-                <tr>
-                  <td>이용일 1일 전</td>
-                  <td>100%</td>
-                  <td>환불 없음</td>
-                </tr>
-                <tr>
-                  <td>이용일 당일</td>
-                  <td>100%</td>
-                  <td>환불 없음</td>
-                </tr>
-              </tbody>
-            </table>
-
-            <div className="dc-cancel-section-title">[ 취소수수료 규정 안내 ]</div>
-            <ul className="dc-cancel-list">
-              <li>예약취소는 구매한 사이트의 "MYPAGE" 또는 "예약확인/취소"에서 가능합니다.</li>
-              <li>
-                취소수수료는 예약 시점과 무관하게 <strong>입실일로부터 남은 날짜 기준</strong>으로
-                부과됩니다.
-              </li>
-              <li>예약 이용일 변경은 불가하며, 취소 후 재예약해야 합니다.</li>
-              <li>중복예약/업체요청/법령에 의한 취소 등은 반드시 안내된 고객센터 또는 숙소를 통해 진행해주세요.</li>
-              <li>미성년자는 보호자 동반 없이 이용할 수 없습니다.</li>
-            </ul>
-
-            <div className="dc-cancel-section-title">
-              [ 기상 상황 및 감염병 관련 예약 취소 안내 ]
+        {checkIn && checkOut && (
+          <div className="dc-step-summary dc-step-summary-single">
+            <div className="summary-item">
+              <strong>입실</strong> {formatDateLabel(checkIn)}
             </div>
-            <ul className="dc-cancel-list">
-              <li>우천으로 인한 환불 및 날짜 변경은 불가합니다.</li>
-              <li>
-                천재지변, 법정 감염병 등 불가항력적 사유로 이용이 불가한 경우, 고객센터로 증빙서류와 함께
-                문의해 주세요.
-              </li>
-              <li>
-                제휴 캠핑장 정책에 따라 수수료 발생/취소 제한이 있을 수 있으며, 사전 협의 없이 직접 취소 시
-                일반 환불 규정이 적용됩니다.
-              </li>
-            </ul>
-
-            <div className="dc-cancel-section-title">[ 환불 관련 안내 ]</div>
-            <ul className="dc-cancel-list">
-              <li>취소수수료를 제외한 금액이 환불되며, 수수료는 총 결제금액 기준으로 산정됩니다.</li>
-              <li>결제수단에 따라 환불 처리까지 영업일 기준 일정 시간이 소요됩니다.</li>
-              <li>자세한 사항은 고객센터(070-4336-1824)로 문의해주세요.</li>
-            </ul>
-
-            <div className="dc-cancel-section-title">
-              [ 쿠폰 사용 시 예약 취소 관련 유의사항 ]
+            <span className="summary-dot">·</span>
+            <div className="summary-item">
+              <strong>퇴실</strong> {formatDateLabel(checkOut)}
             </div>
-            <ul className="dc-cancel-list">
-              <li>전액 환불 가능 기간 내 취소 시 사용 쿠폰은 유효기간이 남아있다면 자동 복원됩니다.</li>
-              <li>
-                취소수수료는 할인 전 전체 예약 금액 기준으로 산정되며, 실결제금액 → 쿠폰 순으로 차감됩니다.
-              </li>
-              <li>유효기간 만료, 선착순/즉시할인 등 일부 쿠폰은 복원이 불가할 수 있습니다.</li>
-              <li>부정 사용이 의심되는 경우 쿠폰이 회수될 수 있습니다.</li>
-            </ul>
+            <span className="summary-dot">·</span>
+            <div className="summary-item">
+              <strong>인원</strong> {people}명
+            </div>
           </div>
         )}
+
+        {/* 상품소개 */}
+        <div className="dc-site-desc">
+          <div className="dc-site-desc-title">상품소개</div>
+          <ul className="dc-site-desc-list">
+            <li>
+              22년도 수영장 오픈은 7월 20일 예정입니다. 오픈 일정은 업체
+              사정에 따라 변동될 수 있습니다.
+            </li>
+            <li>기준 인원 4인, 최대 인원 5인</li>
+          </ul>
+          <div className="dc-site-desc-subtitle">예약방법안내</div>
+          <ul className="dc-site-desc-list">
+            <li>입실일과 퇴실일을 클릭하시면 됩니다.</li>
+            <li>
+              예시) 8월 1일 ~ 8월 4일 (3박4일) → 8/1(입실), 8/4(퇴실) 클릭
+            </li>
+          </ul>
+          <div className="dc-site-desc-subtitle">시설상태</div>
+          <ul className="dc-site-desc-list">
+            <li>전기, 온수, 배수 양호, 화로대 사용 가능 (전 구역 자갈 양호)</li>
+            <li>
+              부대시설: 펜션 1개동, 관리동(화장실/샤워실 남·녀, 개수대),
+              농구대, 잔디마당, 야외 수영장
+            </li>
+          </ul>
+        </div>
+
+        {/* 알립니다 */}
+        <div className="dc-site-desc">
+          <div className="dc-site-desc-title">알립니다</div>
+          <div className="dc-site-alert">
+            알림 내용을 읽지 않고 발생하는 불이익에 대해 책임지지 않습니다.
+          </div>
+          <ul className="dc-site-desc-list">
+            <li>기준 인원 초과 시 1인당 추가 요금이 발생할 수 있습니다.</li>
+            <li>여름 성수기 텐트촌 에어컨 사용 시 전기요금이 별도 부과됩니다.</li>
+            <li>예약 변경은 불가하며, 취소 후 재예약해야 합니다.</li>
+            <li>10:30~11:30 매너타임을 꼭 지켜주세요.</li>
+            <li>입실 13시 / 퇴실 12시를 준수해주세요.</li>
+          </ul>
+        </div>
+
+        {/* 취소 수수료 안내 (아코디언) */}
+        <CancelPolicyAccordion />
+      </section>
+
+      {/* 하단 고정 예약 바 */}
+      <div className="dc-fixed-reserve-bar">
+        <button
+          type="button"
+          className="dc-fixed-date"
+          onClick={openDateSheet}
+        >
+          <span className="dc-fixed-date-icon">📅</span>
+          <span className="dc-fixed-date-text">{rangeText}</span>
+        </button>
+        <button
+          type="button"
+          className="dc-fixed-reserve-btn"
+          onClick={handleReserveClick}
+        >
+          예약하기
+        </button>
       </div>
-    </section>
+
+      {/* 날짜 변경 시트 */}
+      {isDateSheetOpen && (
+        <>
+          <div className="dc-qb-sheet-backdrop" onClick={closeDateSheet} />
+          <div className="dc-qb-sheet dc-qb-sheet-open">
+            <div className="dc-qb-sheet-header">
+              <div>날짜 선택</div>
+              <button type="button" onClick={closeDateSheet}>
+                ✕
+              </button>
+            </div>
+            <div className="dc-qb-date-tabs">
+              <div className="active">
+                {checkIn ? `입실일 ${formatDateLabel(checkIn)}` : "입실일 선택"}
+              </div>
+              <div className="active">
+                {checkOut
+                  ? `퇴실일 ${formatDateLabel(checkOut)}`
+                  : "퇴실일 선택"}
+              </div>
+            </div>
+            <CalendarGrid
+              cells={cells}
+              selectingCheckOut={selectingCheckOut}
+              today={today}
+              maxCheckInISO={maxCheckInISO}
+              checkIn={checkIn}
+              checkOut={checkOut}
+              onDateClick={handleDateClick}
+              monthLabel={monthLabel}
+              onMonthChange={handleMonthChange}
+            />
+            <button
+              type="button"
+              className="dc-qb-sheet-btn"
+              onClick={handleDateConfirm}
+            >
+              적용하기
+            </button>
+          </div>
+        </>
+      )}
+    </>
   );
 }
 
+/* =========================
+   Cancel Policy Accordion
+   ========================= */
 
+function CancelPolicyAccordion() {
+  const [open, setOpen] = useState(false);
+  const toggle = () => setOpen((v) => !v);
 
+  return (
+    <div className="dc-cancel-wrap">
+      <button
+        type="button"
+        className="dc-cancel-header"
+        onClick={toggle}
+      >
+        <span className="dc-cancel-title">취소수수료 안내</span>
+        <span className={"dc-cancel-arrow" + (open ? " open" : "")}>⌃</span>
+      </button>
+      {open && (
+        <div className="dc-cancel-body">
+          <table className="dc-cancel-table">
+            <thead>
+              <tr>
+                <th>취소 기준</th>
+                <th>취소 수수료율</th>
+                <th>환불률</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>이용일 7일 전</td>
+                <td>수수료 없음</td>
+                <td>전액 환불</td>
+              </tr>
+              <tr>
+                <td>이용일 6일 전</td>
+                <td>50%</td>
+                <td>50%</td>
+              </tr>
+              <tr>
+                <td>이용일 5일 전</td>
+                <td>50%</td>
+                <td>50%</td>
+              </tr>
+              <tr>
+                <td>이용일 4일 전</td>
+                <td>50%</td>
+                <td>50%</td>
+              </tr>
+              <tr>
+                <td>이용일 3일 전</td>
+                <td>50%</td>
+                <td>50%</td>
+              </tr>
+              <tr>
+                <td>이용일 2일 전</td>
+                <td>70%</td>
+                <td>30%</td>
+              </tr>
+              <tr>
+                <td>이용일 1일 전</td>
+                <td>100%</td>
+                <td>환불 없음</td>
+              </tr>
+              <tr>
+                <td>이용일 당일</td>
+                <td>100%</td>
+                <td>환불 없음</td>
+              </tr>
+            </tbody>
+          </table>
+          <div className="dc-cancel-text">
+            <p>
+              예약취소는 "MYPAGE" 혹은 "예약확인/취소"에서 가능하며,
+              취소수수료는 입실일 기준 남은 날짜에 따라 부과됩니다.
+            </p>
+            <p>
+              우천, 단순 변심 등은 일반 환불 규정이 적용되며 상세 내용은
+              캠핑장 안내를 참고해주세요.
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 /* =========================
    Site Detail Carousel
@@ -1713,9 +1869,10 @@ function SiteImageCarousel({ images }) {
 
   useEffect(() => {
     if (valid.length <= 1) return;
-    const id = setInterval(() => {
-      setIdx((p) => (p + 1) % valid.length);
-    }, 2000);
+    const id = setInterval(
+      () => setIdx((p) => (p + 1) % valid.length),
+      2000
+    );
     return () => clearInterval(id);
   }, [valid.length]);
 
@@ -1736,7 +1893,9 @@ function SiteImageCarousel({ images }) {
           key={`${src}-${i}`}
           src={src}
           alt=""
-          className={"dc-site-img" + (i === idx ? " active" : "")}
+          className={
+            "dc-site-img" + (i === idx ? " active" : "")
+          }
           onError={(e) => {
             e.target.style.display = "none";
           }}
@@ -1750,14 +1909,383 @@ function SiteImageCarousel({ images }) {
 }
 
 /* =========================
+   Confirm Reserve Page
+   ========================= */
+
+function ConfirmReservePage({ quickData }) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todayISO = toISO(today);
+
+  const checkIn = quickData?.checkIn || "";
+  const checkOut = quickData?.checkOut || "";
+  const people = quickData?.people || 2;
+
+  const d = checkIn ? diffDays(todayISO, checkIn) : null;
+  const dLabel =
+    d === null
+      ? "-"
+      : d > 0
+      ? `D-${d}`
+      : d === 0
+      ? "D-Day"
+      : "지난 날짜";
+
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+  const [request, setRequest] = useState("");
+  const [extraCnt, setExtraCnt] = useState(0);
+
+  const [qa, setQa] = useState({
+    q1: false,
+    q2: "",
+    q3: false,
+    q4: false,
+    q5: false,
+    q6: false,
+    q7: false,
+    q8: false,
+  });
+
+  const [agree, setAgree] = useState({
+    all: false,
+    a1: false,
+    a2: false,
+    a3: false,
+    a4: false,
+    a5: false,
+  });
+
+  const handleExtraChange = (delta) => {
+    setExtraCnt((prev) => {
+      const next = prev + delta;
+      if (next < 0) return 0;
+      if (next > 10) return 10;
+      return next;
+    });
+  };
+
+  const toggleQa = (key) =>
+    setQa((prev) => ({ ...prev, [key]: !prev[key] }));
+
+  const handleAgreeToggle = (key) => {
+    if (key === "all") {
+      const next = !agree.all;
+      setAgree({
+        all: next,
+        a1: next,
+        a2: next,
+        a3: next,
+        a4: next,
+        a5: next,
+      });
+    } else {
+      const next = { ...agree, [key]: !agree[key] };
+      next.all = next.a1 && next.a2 && next.a3 && next.a4 && next.a5;
+      setAgree(next);
+    }
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!name.trim()) {
+      alert("예약자 이름을 입력해주세요.");
+      return;
+    }
+    if (!phone.trim()) {
+      alert("휴대폰 번호를 입력해주세요.");
+      return;
+    }
+    if (!(agree.a1 && agree.a2 && agree.a3 && agree.a4 && agree.a5)) {
+      alert("모든 필수 약관에 동의해주세요.");
+      return;
+    }
+    alert("예약 정보가 완료되었습니다. (실제 결제/전송 로직 연동 필요)");
+  };
+
+  return (
+    <form
+      className="dc-step-card dc-confirm-wrap"
+      onSubmit={handleSubmit}
+    >
+      {/* 상단 일정 요약 */}
+      <div className="dc-confirm-top">
+        <div className="dc-confirm-camp-name">
+          카바나 데크
+        </div>
+
+        <div className="dc-confirm-date-cards">
+          <div className="dc-confirm-date-card">
+            <div className="label">입실일</div>
+            <div className="date">
+              {checkIn ? formatDateLabel(checkIn) : "-"}
+            </div>
+          </div>
+          <div className="dc-confirm-date-card">
+            <div className="label">퇴실일</div>
+            <div className="date">
+              {checkOut ? formatDateLabel(checkOut) : "-"}
+            </div>
+          </div>
+        </div>
+
+        <div className="dc-confirm-dday">
+          캠핑 가는 날{" "}
+          <span className="point">{dLabel}</span>
+        </div>
+      </div>
+
+      {/* 예약자 정보 */}
+      <section className="dc-confirm-section">
+        <h3>예약자 정보</h3>
+        <div className="dc-field">
+          <label>
+            예약자 이름 <span className="req">*</span>
+          </label>
+          <input
+            type="text"
+            placeholder="예약자 이름을 입력해주세요."
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+        </div>
+        <div className="dc-field">
+          <label>
+            휴대폰 번호 <span className="req">*</span>
+          </label>
+          <input
+            type="tel"
+            placeholder="휴대폰 번호를 입력해주세요."
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+          />
+        </div>
+        <div className="dc-field">
+          <label>이메일 (선택)</label>
+          <input
+            type="email"
+            placeholder="(선택) 이메일을 입력해주세요."
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+        </div>
+        <div className="dc-field">
+          <label>요청사항 (선택)</label>
+          <textarea
+            placeholder="(선택) 요청사항을 입력해주세요."
+            value={request}
+            onChange={(e) => setRequest(e.target.value)}
+          />
+        </div>
+      </section>
+
+      {/* 추가 옵션 */}
+      <section className="dc-confirm-section">
+        <h3>추가 옵션</h3>
+        <div className="dc-option-box">
+          <div className="dc-option-label-row">
+            <span className="dc-option-badge">현장결제</span>
+            <span className="dc-option-title">
+              기준 인원 초과 시 모든 연령 1인 1박당 10,000원
+            </span>
+          </div>
+          <p className="dc-option-help">
+            상품 요금은 기준 인원에 대한 요금이며, 기준 인원 초과 시 추가
+            인원 요금이 발생합니다. (최대 인원 초과 입실 불가)
+          </p>
+          <div className="dc-option-bottom">
+            <div className="dc-option-price">10,000원</div>
+            <div className="dc-option-counter">
+              <button
+                type="button"
+                onClick={() => handleExtraChange(-1)}
+              >
+                -
+              </button>
+              <span>{extraCnt}</span>
+              <button
+                type="button"
+                onClick={() => handleExtraChange(1)}
+              >
+                +
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 예약자 질의응답 */}
+      <section className="dc-confirm-section">
+        <h3>예약자 질의응답</h3>
+
+        <QaToggle
+          label="[예약안내] 어린이/연휴 기간 관련 안내를 확인하셨나요?"
+          qaKey="q1"
+          checked={qa.q1}
+          onToggle={toggleQa}
+        />
+        <QaInput
+          label="[필수] 본인 포함 총 방문 인원 수를 입력해주세요. (기준 인원 초과 시 현장 결제)"
+          value={qa.q2}
+          onChange={(v) => setQa((p) => ({ ...p, q2: v }))}
+        />
+        <QaToggle
+          label="[예약안내] 1사이트 1차량, 추가 차량은 외부 주차 안내를 확인하셨나요?"
+          qaKey="q3"
+          checked={qa.q3}
+          onToggle={toggleQa}
+        />
+        <QaToggle
+          label="[예약안내] 취소·환불 규정 및 예약변경 불가 안내를 확인하셨나요?"
+          qaKey="q4"
+          checked={qa.q4}
+          onToggle={toggleQa}
+        />
+        <QaToggle
+          label="[예약안내] 중복 예약 및 요금 오류 관련 안내를 확인하셨나요?"
+          qaKey="q5"
+          checked={qa.q5}
+          onToggle={toggleQa}
+        />
+        <QaToggle
+          label="[예약안내] 매너타임(22:30~11:30) 준수에 동의하시나요?"
+          qaKey="q6"
+          checked={qa.q6}
+          onToggle={toggleQa}
+        />
+        <QaToggle
+          label="[예약안내] 본 시설 이용수칙 및 환불 규정에 동의하시나요?"
+          qaKey="q7"
+          checked={qa.q7}
+          onToggle={toggleQa}
+        />
+        <QaToggle
+          label="[예약안내] 만 19세 이상이며, 모든 안내사항을 확인하셨나요?"
+          qaKey="q8"
+          checked={qa.q8}
+          onToggle={toggleQa}
+        />
+      </section>
+
+      {/* 약관 동의 */}
+      <section className="dc-confirm-section">
+        <h3>약관 전체 동의</h3>
+        <label className="dc-agree-all">
+          <input
+            type="checkbox"
+            checked={agree.all}
+            onChange={() => handleAgreeToggle("all")}
+          />
+          <span>(필수) 약관 전체 동의</span>
+        </label>
+        <ul className="dc-agree-list">
+          <AgreeItem
+            label="(필수) 취소 및 환불 규정 동의"
+            checked={agree.a1}
+            onToggle={() => handleAgreeToggle("a1")}
+          />
+          <AgreeItem
+            label="(필수) 숙소 이용 규칙 및 주의사항 동의"
+            checked={agree.a2}
+            onToggle={() => handleAgreeToggle("a2")}
+          />
+          <AgreeItem
+            label="(필수) 개인정보 수집 및 이용 동의"
+            checked={agree.a3}
+            onToggle={() => handleAgreeToggle("a3")}
+          />
+          <AgreeItem
+            label="(필수) 개인정보 제3자 제공 동의"
+            checked={agree.a4}
+            onToggle={() => handleAgreeToggle("a4")}
+          />
+          <AgreeItem
+            label="(필수) 만 19세 이상 이용 동의"
+            checked={agree.a5}
+            onToggle={() => handleAgreeToggle("a5")}
+          />
+        </ul>
+      </section>
+
+      {/* 제출 버튼 */}
+      <div className="dc-confirm-submit-wrap">
+        <button type="submit" className="dc-confirm-submit-btn">
+          예약 신청 완료하기
+        </button>
+      </div>
+    </form>
+  );
+}
+
+/* 질의응답 컴포넌트 */
+
+function QaToggle({ label, qaKey, checked, onToggle }) {
+  return (
+    <div className="dc-qa-box">
+      <div className="dc-qa-label-row">
+        <span className="dc-qa-required">필수</span>
+        <p className="dc-qa-text">{label}</p>
+      </div>
+      <button
+        type="button"
+        className={
+          "dc-qa-toggle" + (checked ? " active" : "")
+        }
+        onClick={() => onToggle(qaKey)}
+      >
+        네, 확인했습니다.
+      </button>
+    </div>
+  );
+}
+
+function QaInput({ label, value, onChange }) {
+  return (
+    <div className="dc-qa-box">
+      <div className="dc-qa-label-row">
+        <span className="dc-qa-required">필수</span>
+        <p className="dc-qa-text">{label}</p>
+      </div>
+      <textarea
+        className="dc-qa-input"
+        placeholder="필수 질의응답을 입력해주세요."
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+      />
+    </div>
+  );
+}
+
+/* 약관 아이템 */
+
+function AgreeItem({ label, checked, onToggle }) {
+  return (
+    <li className="dc-agree-item">
+      <label>
+        <input
+          type="checkbox"
+          checked={checked}
+          onChange={onToggle}
+        />
+        <span>{label}</span>
+      </label>
+      <span className="dc-agree-arrow">›</span>
+    </li>
+  );
+}
+
+/* =========================
    Footer
    ========================= */
 
 function Footer() {
   return (
-    <footer className="dc-footer" id="contact">
+    <footer className="dc-footer">
       <div>
-        <div className="dc-logo-sm">담양 금성산성 오토캠핑장</div>
+        <div className="dc-logo-sm">
+          담양 금성산성 오토캠핑장
+        </div>
         <div>
           예약 및 문의 : 010-0000-0000
           <br />

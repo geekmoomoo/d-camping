@@ -9,20 +9,18 @@
   --dc-border-subtle: rgba(31, 41, 55, 0.98);
   --dc-text: #e5e7eb;
   --dc-muted: #9ca3af;
-  --dc-accent: #22c55e;
+  --dc-accent: #22c55e;          /* 초록 */
   --dc-accent-soft: rgba(34, 197, 94, 0.16);
+  --dc-blue: #38bdf8;
+  --dc-blue-soft: rgba(56, 189, 248, 0.18);
   --dc-danger: #f97316;
-
-  /* 🔽 둥근 정도 전체적으로 완화 */
-  --dc-radius-xl: 16px;  /* (기존 26 → 16) */
-  --dc-radius-lg: 12px;  /* (기존 20 → 12) */
-  --dc-radius-md: 8px;   /* (기존 14 → 8) */
-
+  --dc-radius-xl: 20px;          /* 전체 라운드 조금 줄임 */
+  --dc-radius-lg: 16px;
+  --dc-radius-md: 10px;
   --dc-shadow-strong: 0 24px 80px rgba(0, 0, 0, 0.9);
   --dc-shadow-soft: 0 14px 40px rgba(0, 0, 0, 0.7);
   --dc-font-main: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
-
 
 *,
 *::before,
@@ -58,8 +56,7 @@ button {
 
 .dc-page {
   min-height: 100vh;
-  background:
-    radial-gradient(circle at 50% -40px, #020817 0, #020817 45%, #000 100%);
+  background: radial-gradient(circle at 50% -40px, #020817 0, #020817 45%, #000 100%);
   color: var(--dc-text);
 }
 
@@ -154,7 +151,7 @@ button {
 }
 
 /* =========================
-   Hero Section
+   Layout / Hero
    ========================= */
 
 main {
@@ -168,18 +165,17 @@ main {
   align-items: flex-start;
 }
 
-/* Hero Carousel */
+/* Hero Carousel : 배너만 보이도록 */
 
 .dc-hero-carousel {
   position: relative;
   width: 100%;
   max-width: 900px;
   margin: 0 auto;
-  border-radius: var(--dc-radius-xl);
-  padding: 18px 14px 16px;
-  background: radial-gradient(circle at top left, #0f172a, #020817);
-  border: 1px solid rgba(31, 41, 55, 0.98);
-  box-shadow: var(--dc-shadow-strong);
+  padding: 0;
+  background: transparent;
+  border: none;
+  box-shadow: none;
   overflow: hidden;
 }
 
@@ -190,7 +186,6 @@ main {
 
 .dc-hero-slide {
   min-width: 100%;
-  padding: 0 4px;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -202,7 +197,7 @@ main {
   aspect-ratio: 900 / 386;
   object-fit: cover;
   border-radius: 18px;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.9);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.8);
 }
 
 .dc-hero-slide-empty {
@@ -270,23 +265,23 @@ main {
   padding: 18px 18px 16px;
 }
 
+/* 헤더 바 (빠른예약 / 지도에서 선택) */
+
 .dc-qb-header {
-  margin: -20px -18px 12px;
+  margin: -18px -18px 12px;
   padding: 9px 18px 8px;
-  border-radius: var(--dc-radius-xl) var(--dc-radius-xl) 18px 18px;
-  background: radial-gradient(circle at top left, rgba(34, 197, 94, 0.18), rgba(15, 23, 42, 0.98));
+  border-radius: var(--dc-radius-xl) var(--dc-radius-xl) 14px 14px;
   display: flex;
   align-items: center;
-  justify-content: flex-start;
 }
 
-/* 빠른 예약 / 지도에서 선택 헤더 라운드 정리 */
-.dc-qb-quick .dc-qb-header,
-.dc-qb-map .dc-qb-header {
-  margin: -20px -18px 15px;              /* 카드 밖으로 너무 안 튀어나가게 */
-  border-radius: 15px 20px 0px 0px;    /* 위만 적당히 라운드, 아래는 살짝 */
+.dc-qb-header-green {
+  background: radial-gradient(circle at top left, rgba(34, 197, 94, 0.2), rgba(15, 23, 42, 1));
 }
 
+.dc-qb-header-blue {
+  background: radial-gradient(circle at top left, rgba(56, 189, 248, 0.22), rgba(15, 23, 42, 1));
+}
 
 .dc-qb-title {
   font-size: 16px;
@@ -301,13 +296,13 @@ main {
   color: #7dd3fc;
 }
 
+/* 상단 바 (날짜/인원 버튼) */
+
 .dc-hero-search {
   display: flex;
   flex-direction: column;
   gap: 18px;
 }
-
-/* 상단 바 (날짜/인원 버튼) */
 
 .dc-qb-bar-row {
   display: grid;
@@ -392,6 +387,12 @@ main {
   transition: all 0.18s ease;
 }
 
+.dc-qb-type-btn:hover {
+  transform: translateY(-1px);
+}
+
+/* 빠른예약(초록) 활성 */
+
 .dc-qb-type-btn.active {
   background: var(--dc-accent-soft);
   border-color: var(--dc-accent);
@@ -399,11 +400,16 @@ main {
   box-shadow: 0 10px 28px rgba(34, 197, 94, 0.25);
 }
 
-.dc-qb-type-btn:hover {
-  transform: translateY(-1px);
+/* 지도에서 선택(파랑) 활성 */
+
+.dc-qb-type-btn.blue.active {
+  background: var(--dc-blue-soft);
+  border-color: var(--dc-blue);
+  color: #e0f2fe;
+  box-shadow: 0 10px 28px rgba(56, 189, 248, 0.28);
 }
 
-/* 액션 버튼 */
+/* 액션 버튼: 기본은 테두리+텍스트, hover 시 채움 */
 
 .dc-qb-actions {
   display: flex;
@@ -411,9 +417,7 @@ main {
   margin-top: 6px;
 }
 
-.dc-qb-actions-full .dc-btn-primary {
-  flex: 1.6;
-}
+.dc-qb-actions-full .dc-btn-primary,
 .dc-qb-actions-full .dc-btn-outline {
   flex: 1;
 }
@@ -421,9 +425,9 @@ main {
 .dc-btn-primary {
   padding: 11px 16px;
   border-radius: 999px;
-  border: none;
-  background: var(--dc-accent);
-  color: #020817;
+  border: 1px solid var(--dc-accent);
+  background: transparent;
+  color: var(--dc-accent);
   font-size: 15px;
   font-weight: 700;
   cursor: pointer;
@@ -431,9 +435,10 @@ main {
 }
 
 .dc-btn-primary:hover {
-  background: #22c55e;
+  background: var(--dc-accent);
+  color: #020817;
+  box-shadow: 0 12px 32px rgba(34, 197, 94, 0.35);
   transform: translateY(-1px);
-  box-shadow: 0 12px 38px rgba(34, 197, 94, 0.35);
 }
 
 .dc-btn-outline {
@@ -454,6 +459,29 @@ main {
   transform: translateY(-1px);
 }
 
+/* 지도에서 선택용 파랑 버튼 */
+
+.dc-btn-map-primary {
+  border-color: var(--dc-blue);
+  color: var(--dc-blue);
+}
+
+.dc-btn-map-primary:hover {
+  background: var(--dc-blue);
+  color: #020817;
+  box-shadow: 0 12px 32px rgba(56, 189, 248, 0.35);
+}
+
+.dc-btn-map-outline {
+  border-color: var(--dc-blue);
+  color: #bfdbfe;
+}
+
+.dc-btn-map-outline:hover {
+  background: rgba(15, 23, 42, 1);
+  border-color: var(--dc-blue);
+}
+
 /* 헬퍼 & 에러 */
 
 .dc-qb-helper {
@@ -469,7 +497,7 @@ main {
 }
 
 /* =========================
-   Bottom Sheets (날짜/인원 선택)
+   Bottom Sheets
    ========================= */
 
 .dc-qb-sheet-backdrop {
@@ -642,7 +670,7 @@ main {
   transform: translateY(-1px);
 }
 
-/* 인원 시트 (크게) */
+/* 인원 시트 */
 
 .dc-qb-people-row {
   display: flex;
@@ -743,20 +771,6 @@ main {
   color: #e5e7eb;
 }
 
-.dc-btn-map {
-  background: #38bdf8;
-  color: #020817;
-}
-
-.dc-btn-map:hover {
-  background: #0ea5e9;
-}
-
-.dc-btn-map-outline {
-  border-color: #38bdf8;
-  color: #bfdbfe;
-}
-
 .dc-qb-map-error {
   margin-top: 6px;
 }
@@ -816,10 +830,10 @@ main {
 
 .dc-step-card {
   max-width: 960px;
-  margin: 0 auto;
+  margin: 0 auto 24px;
 }
 
-/* 요약 박스 */
+/* 요약 한줄 */
 
 .dc-step-summary {
   margin-top: 12px;
@@ -848,8 +862,32 @@ main {
   font-weight: 600;
 }
 
+/* 상세용 single-line */
+
+.dc-step-summary-single {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgba(8, 12, 24, 0.9);
+  border: 1px solid rgba(51, 65, 85, 0.98);
+  font-size: 13px;
+}
+
+.summary-item strong {
+  color: #93c5fd;
+  margin-right: 4px;
+}
+
+.summary-dot {
+  color: #7dd3fc;
+  font-weight: 700;
+}
+
 /* =========================
-   사이트 선택 단계
+   사이트 선택 카드
    ========================= */
 
 .dc-site-filter-bar {
@@ -881,7 +919,7 @@ main {
 
 .dc-site-thumb-wrap {
   flex: 0 0 120px;
-  border-radius: 18px;
+  border-radius: 16px;
   overflow: hidden;
   background: #020817;
   align-self: stretch;
@@ -900,7 +938,7 @@ main {
   justify-content: space-between;
 }
 
-/* 유형 태그 + 텍스트 */
+/* 유형 태그 */
 
 .dc-site-type-tag {
   display: inline-block;
@@ -912,7 +950,6 @@ main {
   letter-spacing: 0.01em;
 }
 
-/* 유형별 컬러 (은은한 파스텔) */
 .dc-site-type-tag.type-self-caravan {
   background: rgba(34, 197, 94, 0.16);
   color: #4ade80;
@@ -988,7 +1025,7 @@ main {
 }
 
 /* =========================
-   사이트 상세 페이지 캐러셀
+   사이트 상세
    ========================= */
 
 .dc-step-card-site {
@@ -1109,6 +1146,504 @@ main {
   color: #f9fafb;
 }
 
+/* 상품소개 & 알립니다 */
+
+.dc-site-desc {
+  margin: 16px 18px 0;
+  padding: 14px 16px 12px;
+  background: rgba(6, 10, 25, 0.98);
+  border-radius: 14px;
+  border: 1px solid rgba(56, 189, 248, 0.1);
+  color: #e5e7eb;
+  font-size: 0.86rem;
+  line-height: 1.6;
+}
+
+.dc-site-desc-title {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #f9fafb;
+  margin-bottom: 6px;
+}
+
+.dc-site-desc-subtitle {
+  font-weight: 600;
+  margin-top: 10px;
+  margin-bottom: 4px;
+  color: #93c5fd;
+  font-size: 0.82rem;
+}
+
+.dc-site-desc-list {
+  list-style: disc;
+  padding-left: 18px;
+  margin: 0 0 6px;
+}
+
+.dc-site-desc-list li {
+  margin-bottom: 3px;
+  color: #d1d5db;
+}
+
+.dc-site-alert {
+  padding: 8px 10px;
+  margin-bottom: 8px;
+  border-radius: 8px;
+  background: rgba(248, 113, 113, 0.16);
+  color: #fecaca;
+  font-size: 0.8rem;
+  border: 1px solid rgba(248, 113, 113, 0.4);
+}
+
+/* 취소수수료 아코디언 */
+
+.dc-cancel-wrap {
+  margin: 16px 18px 0;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 253, 0.3);
+  background: rgba(6, 10, 25, 0.98);
+}
+
+.dc-cancel-header {
+  width: 100%;
+  padding: 10px 14px;
+  border: none;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+}
+
+.dc-cancel-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #fecaca;
+}
+
+.dc-cancel-arrow {
+  font-size: 0.8rem;
+  color: #9ca3af;
+  transition: transform 0.2s ease;
+}
+
+.dc-cancel-arrow.open {
+  transform: rotate(180deg);
+}
+
+.dc-cancel-body {
+  padding: 0 14px 12px;
+  font-size: 0.78rem;
+  color: #e5e7eb;
+}
+
+.dc-cancel-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 8px;
+  font-size: 0.75rem;
+}
+
+.dc-cancel-table th,
+.dc-cancel-table td {
+  padding: 4px 6px;
+  border: 1px solid rgba(75, 85, 99, 0.8);
+  text-align: center;
+}
+
+.dc-cancel-table th {
+  background: rgba(15, 23, 42, 1);
+  color: #fecaca;
+  font-weight: 600;
+}
+
+.dc-cancel-text p {
+  margin: 2px 0;
+  line-height: 1.5;
+  color: #d1d5db;
+}
+
+/* =========================
+   하단 고정 예약 바
+   ========================= */
+
+.dc-fixed-reserve-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 10px 24px 14px;
+  background: radial-gradient(circle at top, rgba(15, 23, 42, 0.98), #020817);
+  border-top: 1px solid rgba(31, 41, 55, 0.98);
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  z-index: 95;
+}
+
+.dc-fixed-date {
+  flex: 1.8;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(75, 85, 99, 0.98);
+  background: transparent;
+  color: #e5e7eb;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.dc-fixed-date-icon {
+  font-size: 18px;
+}
+
+.dc-fixed-date-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dc-fixed-reserve-btn {
+  flex: 1;
+  padding: 11px 16px;
+  border-radius: 999px;
+  border: none;
+  background: var(--dc-danger);
+  color: #111827;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.dc-fixed-reserve-btn:hover {
+  background: #fb923c;
+  transform: translateY(-1px);
+  box-shadow: 0 10px 28px rgba(251, 146, 60, 0.4);
+}
+
+/* =========================
+   예약확정 페이지
+   ========================= */
+
+.dc-confirm-wrap {
+  padding: 18px 18px 80px;
+}
+
+.dc-confirm-top {
+  margin-bottom: 18px;
+}
+
+.dc-confirm-camp-name {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+.dc-confirm-date-cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.dc-confirm-date-card {
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #f9fafb;
+  color: #111827;
+}
+
+.dc-confirm-date-card .label {
+  font-size: 11px;
+  color: #9ca3af;
+  margin-bottom: 4px;
+}
+
+.dc-confirm-date-card .date {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.dc-confirm-dday {
+  padding: 8px 10px;
+  text-align: center;
+  border-radius: 8px;
+  background: #f4f4f5;
+  font-size: 13px;
+  color: #4b5563;
+}
+
+.dc-confirm-dday .point {
+  color: #ef4444;
+  font-weight: 700;
+}
+
+/* 공통 섹션 */
+
+.dc-confirm-section {
+  margin-top: 22px;
+}
+
+.dc-confirm-section h3 {
+  margin: 0 0 10px;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+/* 예약자 정보 필드 */
+
+.dc-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+
+.dc-field label {
+  font-size: 13px;
+  color: #e5e7eb;
+}
+
+.dc-field .req {
+  color: #f97316;
+  margin-left: 2px;
+}
+
+.dc-field input,
+.dc-field textarea {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(75, 85, 99, 0.9);
+  background: transparent;
+  color: #e5e7eb;
+  font-size: 13px;
+}
+
+.dc-field textarea {
+  min-height: 76px;
+  resize: vertical;
+}
+
+/* 추가 옵션 */
+
+.dc-option-box {
+  padding: 12px 12px 10px;
+  border-radius: 12px;
+  background: rgba(6, 10, 25, 0.98);
+  border: 1px solid rgba(148, 163, 253, 0.25);
+}
+
+.dc-option-label-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.dc-option-badge {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  color: #f97316;
+  background: rgba(248, 250, 252, 0.04);
+  border: 1px solid rgba(248, 181, 129, 0.5);
+}
+
+.dc-option-title {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.dc-option-help {
+  margin: 2px 0 8px;
+  font-size: 11px;
+  color: var(--dc-muted);
+}
+
+.dc-option-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.dc-option-price {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.dc-option-counter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dc-option-counter button {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 253, 0.8);
+  background: transparent;
+  color: #e5e7eb;
+  cursor: pointer;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dc-option-counter span {
+  min-width: 18px;
+  text-align: center;
+}
+
+/* 예약자 질의응답 */
+
+.dc-qa-box {
+  margin-bottom: 10px;
+  padding: 10px 10px 8px;
+  border-radius: 12px;
+  background: rgba(6, 10, 25, 0.98);
+  border: 1px solid rgba(75, 85, 99, 0.9);
+}
+
+.dc-qa-label-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.dc-qa-required {
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(248, 113, 113, 0.14);
+  color: #fecaca;
+  font-size: 10px;
+  margin-top: 2px;
+}
+
+.dc-qa-text {
+  margin: 0;
+  font-size: 11px;
+  color: #e5e7eb;
+  line-height: 1.5;
+}
+
+.dc-qa-toggle {
+  margin-top: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 253, 0.4);
+  background: transparent;
+  color: #9ca3af;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.dc-qa-toggle.active {
+  background: rgba(56, 189, 248, 0.22);
+  border-color: #38bdf8;
+  color: #e5e7eb;
+  box-shadow: 0 8px 22px rgba(56, 189, 248, 0.22);
+}
+
+.dc-qa-input {
+  margin-top: 8px;
+  width: 100%;
+  min-height: 60px;
+  border-radius: 8px;
+  border: 1px solid rgba(75, 85, 99, 0.9);
+  background: transparent;
+  color: #e5e7eb;
+  font-size: 12px;
+  padding: 7px 9px;
+  resize: vertical;
+}
+
+/* 약관 동의 */
+
+.dc-agree-all {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 10px;
+  border-radius: 10px;
+  background: rgba(24, 35, 60, 0.98);
+  font-size: 13px;
+}
+
+.dc-agree-all input {
+  width: 16px;
+  height: 16px;
+}
+
+.dc-agree-list {
+  list-style: none;
+  padding: 8px 0 0;
+  margin: 0;
+  font-size: 12px;
+}
+
+.dc-agree-item {
+  padding: 8px 4px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid rgba(31, 41, 55, 0.9);
+}
+
+.dc-agree-item:last-child {
+  border-bottom: none;
+}
+
+.dc-agree-item label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dc-agree-item input {
+  width: 14px;
+  height: 14px;
+}
+
+.dc-agree-arrow {
+  font-size: 14px;
+  color: #6b7280;
+}
+
+/* 예약 완료 버튼 */
+
+.dc-confirm-submit-wrap {
+  margin-top: 24px;
+}
+
+.dc-confirm-submit-btn {
+  width: 100%;
+  padding: 13px 16px;
+  border-radius: 999px;
+  border: none;
+  background: #f97316;
+  color: #111827;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.dc-confirm-submit-btn:hover {
+  background: #fb923c;
+  transform: translateY(-1px);
+  box-shadow: 0 10px 30px rgba(251, 146, 60, 0.4);
+}
+
 /* =========================
    Footer
    ========================= */
@@ -1145,12 +1680,8 @@ main {
     grid-template-columns: 1fr;
   }
 
-  .dc-hero-carousel {
-    max-width: 100%;
-  }
-
   .dc-step-main {
-    padding: 18px 16px 22px;
+    padding: 18px 16px 80px; /* 하단 고정바 공간 */
   }
 }
 
@@ -1203,383 +1734,4 @@ main {
   .dc-site-manner-box strong {
     font-size: 14px;
   }
-
-    /* 예약 요약 — 한 줄 스타일 */
-  .dc-step-summary.single-line {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 10px;
-    font-size: 1rem;
-    color: #e0e0e0;
-    padding: 14px 12px;
-    border-radius: 10px;
-    background: rgba(255, 255, 255, 0.06);
-    margin-top: 8px;
-  }
-
-  /* 구분용 점 (·) */
-  .dc-step-summary.single-line .summary-dot {
-    color: #7dd3fc; /* 밝은 파란색 포인트 */
-    font-weight: 700;
-    margin: 0 4px;
-  }
-
-  /* 각 항목 강조 */
-  .dc-step-summary.single-line .summary-item strong {
-    color: #93c5fd; /* 부드러운 하늘색 강조 */
-    font-weight: 600;
-    margin-right: 4px;
-  }
-
-  .dc-site-desc {
-  margin-top: 16px;
-  padding: 14px 16px 12px;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  color: #e5e7eb;
-  font-size: 0.85rem;
-  line-height: 1.55;
 }
-
-.dc-site-desc-title {
-  font-weight: 700;
-  font-size: 0.95rem;
-  color: #f9fafb;
-  margin-bottom: 6px;
-}
-
-.dc-site-desc-subtitle {
-  font-weight: 600;
-  margin-top: 10px;
-  margin-bottom: 4px;
-  color: #93c5fd;
-  font-size: 0.82rem;
-}
-
-.dc-site-desc-list {
-  list-style: disc;
-  padding-left: 18px;
-  margin-bottom: 6px;
-}
-
-.dc-site-desc-list li {
-  margin-bottom: 3px;
-  color: #d1d5db;
-}
-
-.dc-hero-carousel,
-.dc-hero-slide {
-  border-radius: 0 !important;
-  overflow: visible !important;
-}
-
-/* 배너 뒤 희미한 네모 배경 제거 */
-.dc-hero,
-.dc-hero-carousel,
-.dc-hero-track {
-  background: transparent !important;
-  box-shadow: none !important;
-  border: none !important;
-}
-
-/* 빠른 예약 헤더는 초록 유지 */
-.dc-qb-quick .dc-qb-header {
-  background: radial-gradient(
-    circle at top left,
-    rgba(34, 197, 94, 0.22),
-    rgba(15, 23, 42, 0.98)
-  );
-}
-
-/* 지도에서 선택 헤더는 파랑 계열 */
-.dc-qb-map .dc-qb-header {
-  background: radial-gradient(
-    circle at top left,
-    rgba(56, 189, 248, 0.22),
-    rgba(15, 23, 42, 0.98)
-  );
-}
-
-/* 지도에서 선택 버튼 hover 시 파란색 유지 */
-.dc-btn-map {
-  background: #38bdf8; /* 기본 파랑 */
-  color: #020817;
-  transition: all 0.25s ease;
-}
-
-.dc-btn-map:hover {
-  background: #0ea5e9; /* hover 시 좀 더 진한 파랑 */
-  box-shadow: 0 0 16px rgba(56, 189, 248, 0.4); /* 파랑빛 글로우 효과 */
-  transform: translateY(-1px);
-}
-
-/* 빠른 예약 - 다음 단계로 진행 버튼 */
-.dc-qb-quick .dc-btn-primary {
-  background: transparent;
-  color: var(--dc-accent);               /* 초록 글자 */
-  border: 1px solid var(--dc-accent);    /* 초록 테두리 */
-  box-shadow: none;
-}
-
-/* hover / active 시 초록색 채워짐 */
-.dc-qb-quick .dc-btn-primary:hover,
-.dc-qb-quick .dc-btn-primary:active {
-  background: var(--dc-accent);
-  color: #020817;                        /* 어두운 배경 위 가독성 */
-  transform: translateY(-1px);
-}
-
-
-/* 지도에서 선택 - 다음 단계로 진행 버튼 */
-.dc-qb-map .dc-btn-primary {
-  background: transparent;
-  color: #38bdf8;                        /* 파랑 글자 */
-  border: 1px solid #38bdf8;             /* 파랑 테두리 */
-  box-shadow: none;
-}
-
-/* hover / active 시 파란색 채워짐 */
-.dc-qb-map .dc-btn-primary:hover,
-.dc-qb-map .dc-btn-primary:active {
-  background: #38bdf8;
-  color: #020817;
-  transform: translateY(-1px);
-}
-
-/* 지도에서 선택 내 활성화된 버튼을 파란색으로 변경 */
-.dc-qb-map .dc-qb-type-btn.active {
-  background: rgba(37, 99, 235, 0.25);     /* 파랑 배경 */
-  border-color: #38bdf8;                   /* 파랑 테두리 */
-  color: #93c5fd;                          /* 밝은 하늘색 글자 */
-  box-shadow: 0 0 18px rgba(37, 99, 235, 0.3);
-}
-
-/* hover 시도 자연스럽게 유지 */
-.dc-qb-map .dc-qb-type-btn:hover {
-  border-color: #38bdf8;
-  box-shadow: 0 0 12px rgba(37, 99, 235, 0.25);
-}
-
-/* 알립니다 섹션 */
-.dc-site-notice {
-  margin-top: 18px;
-  padding: 14px 16px 12px;
-  border-radius: 10px;
-  background: rgba(2, 6, 23, 0.98);
-  border: 1px solid rgba(75, 85, 99, 0.8);
-  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.7);
-  font-size: 0.82rem;
-  line-height: 1.55;
-  color: #e5e7eb;
-}
-
-.dc-site-notice-title {
-  margin: 0 0 8px;
-  font-size: 0.95rem;
-  font-weight: 700;
-  color: #f9fafb;
-}
-
-/* 붉은 경고 박스 */
-.dc-site-notice-alert {
-  margin-bottom: 10px;
-  padding: 8px 10px;
-  border-radius: 6px;
-  background: rgba(248, 113, 113, 0.16);      /* 연한 붉은 배경 */
-  border: 1px solid rgba(248, 113, 113, 0.6);  /* 빨간 테두리 */
-  color: #fecaca;                              /* 연한 살구색 텍스트 */
-  font-size: 0.78rem;
-  font-weight: 600;
-}
-
-/* 리스트 */
-.dc-site-notice-list {
-  margin: 0;
-  padding-left: 16px;
-  list-style: disc;
-}
-
-.dc-site-notice-list li {
-  margin-bottom: 4px;
-  color: #d1d5db;
-}
-
-/* 취소수수료 안내 - 접이식 카드 */
-.dc-site-cancel {
-  margin-top: 16px;
-  padding: 10px 12px 8px;
-  border-radius: 10px;
-  background: rgba(2, 6, 23, 0.98);
-  border: 1px solid rgba(75, 85, 99, 0.85);
-  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.75);
-}
-
-/* 상단 토글 버튼 */
-.dc-cancel-toggle {
-  width: 100%;
-  padding: 4px 2px 6px;
-  border: none;
-  background: transparent;
-  color: #f97373;
-  font-size: 0.9rem;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  cursor: pointer;
-}
-
-.dc-cancel-icon {
-  font-size: 0.9rem;
-  color: #e5e7eb;
-  transition: transform 0.2s ease;
-}
-
-.dc-cancel-toggle.open .dc-cancel-icon {
-  transform: rotate(180deg);
-}
-
-.dc-cancel-body {
-  margin-top: 6px;
-  padding-top: 4px;
-  font-size: 0.74rem;
-  color: #d1d5db;
-  line-height: 1.6;
-  /* 스크롤 제거 */
-  max-height: none;
-  overflow: visible;
-}
-
-/* 표 */
-.dc-cancel-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-bottom: 8px;
-  font-size: 0.72rem;
-}
-
-.dc-cancel-table th,
-.dc-cancel-table td {
-  border: 1px solid rgba(148, 163, 253, 0.2);
-  padding: 4px 6px;
-  text-align: center;
-}
-
-.dc-cancel-table thead th {
-  background: rgba(248, 113, 113, 0.16);
-  color: #fecaca;
-  font-weight: 600;
-}
-
-/* 섹션 타이틀 & 리스트 */
-.dc-cancel-section-title {
-  margin: 6px 0 2px;
-  font-weight: 600;
-  color: #fca5a5;
-}
-
-.dc-cancel-list {
-  margin: 0 0 4px;
-  padding-left: 14px;
-  list-style: disc;
-}
-
-.dc-cancel-list li {
-  margin-bottom: 2px;
-}
-
-/* 마지막 안내 */
-.dc-cancel-footnote {
-  margin-top: 4px;
-  font-size: 0.7rem;
-  color: #9ca3af;
-}
-
-
-/* 상세 페이지 하단 고정 예약 바 */
-.dc-fixed-reserve-bar {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 95;
-  padding: 10px 24px 14px;
-  display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(140px, 1fr);
-  gap: 10px;
-  background: linear-gradient(
-    to top,
-    rgba(2, 6, 23, 0.98),
-    rgba(2, 6, 23, 0.94)
-  );
-  border-top: 1px solid rgba(15, 23, 42, 1);
-  backdrop-filter: blur(12px);
-}
-
-/* 하단 날짜 표시 버튼 */
-.dc-fixed-date {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 14px;
-  border-radius: 999px;
-  border: 1px solid rgba(75, 85, 99, 0.95);
-  background: transparent;
-  color: #e5e7eb;
-  font-size: 0.9rem;
-  cursor: pointer;
-  transition: all 0.18s ease;
-}
-
-.dc-fixed-date:hover {
-  border-color: #38bdf8;
-  box-shadow: 0 8px 22px rgba(56, 189, 248, 0.25);
-  transform: translateY(-1px);
-}
-
-.dc-fixed-date-icon {
-  font-size: 1rem;
-}
-
-.dc-fixed-date-label {
-  flex: 1;
-  text-align: center;
-}
-
-.dc-fixed-date-arrow {
-  font-size: 0.85rem;
-  opacity: 0.8;
-}
-
-/* 하단 예약하기 버튼 */
-.dc-fixed-book-btn {
-  padding: 10px 14px;
-  border-radius: 999px;
-  border: none;
-  font-size: 0.98rem;
-  font-weight: 700;
-  cursor: pointer;
-  background: #fb923c; /* 필요하면 초록/파랑으로 교체 가능 */
-  color: #111827;
-  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.9);
-  transition: all 0.2s ease;
-}
-
-.dc-fixed-book-btn:hover {
-  background: #f97316;
-  transform: translateY(-1px);
-  box-shadow: 0 14px 40px rgba(0, 0, 0, 1);
-}
-
-/* 상세 페이지 내용이 고정 바와 겹치지 않도록 여백 */
-.dc-step-card-site {
-  padding-bottom: 110px;
-}
-
-
-
-
-}
-
