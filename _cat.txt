@@ -1,0 +1,2 @@
+              <span className="dc-qb-bar-icon">?5</span>
+              <span className="dc-qb-bar-icon">?4</span>

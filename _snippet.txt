@@ -1,0 +1,60 @@
+            <span className="dc-qb-title-icon">?</span>
+            빠른 예약
+          </div>
+        </div>
+
+        <div className="dc-qb-bar-row">
+          <button
+            type="button"
+            className="dc-qb-btn dc-qb-date-btn"
+            onClick={openDateSheet}
+          >
+            <div className="dc-qb-btn-label">
+              <span className="dc-qb-bar-icon">?5</span>
+              <div className="dc-qb-btn-info">
+                <span
+                  className={
+                    checkIn && checkOut
+                      ? "dc-qb-btn-main"
+                      : "dc-qb-btn-main dc-qb-bar-placeholder"
+                  }
+                >
+                  {checkIn && checkOut ? rangeText : "날짜선택"}
+                </span>
+                <span className="dc-qb-btn-sub">
+                  {checkIn && dDay !== null ? `D-${dDay}` : "D-day"}
+                </span>
+              </div>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            className="dc-qb-btn dc-qb-people-btn"
+            onClick={openPeopleSheet}
+          >
+            <div className="dc-qb-btn-label">
+              <span className="dc-qb-bar-icon">?4</span>
+              <div className="dc-qb-btn-info">
+                <span className="dc-qb-btn-main">인원 {people}명</span>
+                <span className="dc-qb-btn-sub">변경</span>
+              </div>
+            </div>
+          </button>
+        </div>
+
+        <div className="dc-qb-type-label">
+          이용 유형
+          <span className="dc-qb-type-tip">(선택 안 하면 전체 보기)</span>
+        </div>
+        <div className="dc-qb-type-grid">
+          <SiteTypeButton
+            label="자가 카라반"
+            value="self-caravan"
+            siteType={siteType}
+            onChange={setSiteType}
+          />
+          <SiteTypeButton
+            label="카바나 데크"
+            value="cabana-deck"
+            siteType={siteType}

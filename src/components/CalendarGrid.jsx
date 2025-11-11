@@ -22,12 +22,12 @@ function CalendarGrid({
   return (
     <div className="dc-cal-wrap">
       <div className="dc-cal-header">
-        <button type="button" className="dc-cal-nav" onClick={() => onMonthChange(-1)}>{"\u2039"}</button>
+        <button type="button" className="dc-cal-nav" onClick={() => onMonthChange(-1)}>{"‹"}</button>
         <div className="dc-cal-month">{monthLabel}</div>
-        <button type="button" className="dc-cal-nav" onClick={() => onMonthChange(1)}>{"\u203A"}</button>
+        <button type="button" className="dc-cal-nav" onClick={() => onMonthChange(1)}>{"›"}</button>
       </div>
       <div className="dc-cal-weekdays">
-        {["\uC77C","\uC6D4","\uD654","\uC218","\uBAA9","\uAE08","\uD1A0"].map((d) => (<div key={d}>{d}</div>))}
+        {["일","월","화","수","목","금","토"].map((d) => (<div key={d}>{d}</div>))}
       </div>
       <div className="dc-cal-grid">
         {cells.map((iso, i) => {
@@ -50,7 +50,7 @@ function CalendarGrid({
           );
         })}
       </div>
-      <div className="dc-cal-help">{"\uC785\uC2E4\uC77C "}{checkIn ? formatDateLabel(checkIn) : "-"}{" / "}{"\uD1F4\uC2E4\uC77C "}{checkOut ? formatDateLabel(checkOut) : "-"}</div>
+      <div className="dc-cal-help">{"입실일 "}{checkIn ? formatDateLabel(checkIn) : "-"}{" / "}{"퇴실일 "}{checkOut ? formatDateLabel(checkOut) : "-"}</div>
     </div>
   );
 }

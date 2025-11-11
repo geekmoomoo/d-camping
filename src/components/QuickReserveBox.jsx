@@ -237,7 +237,7 @@ function QuickReserveBox({ onNext }) {
               <span className="dc-qb-bar-icon">👤</span>
               <div className="dc-qb-btn-info">
                 <span className="dc-qb-btn-main">인원 {people}명</span>
-                <span className="dc-qb-btn-sub">변경</span>
+                {/* <span className="dc-qb-btn-sub">변경</span> */}
               </div>
             </div>
           </button>

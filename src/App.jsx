@@ -1,4 +1,4 @@
-﻿import React, { useState } from "react";
+import React, { useState } from "react";
 import "./index.css";
 import Footer from "./components/Footer";
 import StepHeader from "./components/StepHeader";
