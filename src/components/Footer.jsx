@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 
 function Footer() {
   return (
@@ -6,9 +6,9 @@ function Footer() {
       <div>
         <div className="dc-logo-sm">담양 금성산성 오토캠핑장</div>
         <div>
-          예약 및 문의 : 010-0000-0000
+          예약·문의 : 010-0000-0000
           <br />
-          주소 : 전라남도 담양군 (실제 주소 입력)
+          주소 : 전라남도 담양군 (예시 주소)
         </div>
       </div>
       <div>

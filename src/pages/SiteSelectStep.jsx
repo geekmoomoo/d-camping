@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+﻿import React, { useEffect, useMemo, useState } from "react";
 import CalendarGrid from "../components/CalendarGrid";
 import {
   compareISO,
@@ -158,7 +158,7 @@ function SiteSelectStep({ data, onChangeFilter, onSelectSite }) {
   const rangeText =
     checkIn && checkOut
       ? `${formatDateLabel(checkIn)} ~ ${formatDateLabel(checkOut)}`
-      : "날짜를 선택해주세요";
+      : "날짜선택";
 
   useEffect(() => {
     if (!onChangeFilter) return;
@@ -244,7 +244,7 @@ function SiteSelectStep({ data, onChangeFilter, onSelectSite }) {
     closeSheets();
   };
 
-  const monthLabel = `${calYear}년 ${calMonth + 1}월`;
+  const monthLabel = `${calYear}년 ${calMonth + 1}월`; 
   const firstDay = new Date(calYear, calMonth, 1);
   const firstWeekday = firstDay.getDay();
   const totalDays = daysInMonth(calYear, calMonth);
@@ -267,46 +267,33 @@ function SiteSelectStep({ data, onChangeFilter, onSelectSite }) {
   return (
     <section className="dc-step-card">
       <header className="dc-filter-card">
-        <div className="dc-filter-info">
-          <div className="dc-filter-title">언제 떠나시나요?</div>
-          <div className="dc-filter-meta">
-            {checkIn || checkOut ? rangeText : "날짜를 선택해주세요."}
-          </div>
-        </div>
-        <div className="dc-filter-actions">
-          <button
-            type="button"
-            className="dc-filter-btn"
-            onClick={openDateSheet}
-          >
-            날짜 변경
-          </button>
-          <button
-            type="button"
-            className="dc-filter-btn"
-            onClick={openPeopleSheet}
-          >
-            인원 {people}명
-          </button>
+        <div className="dc-filter-combo">
+          <button type="button" className="dc-filter-seg dc-filter-date" onClick={openDateSheet}>{checkIn || checkOut ? rangeText : "날짜선택"}</button>
+          <span className="dc-filter-divider" aria-hidden="true" />
+          <button type="button" className="dc-filter-seg dc-filter-people" onClick={openPeopleSheet}>{`인원 ${people}`}</button>
         </div>
       </header>
 
       <div className="dc-site-grid">
         {filteredSites.map((site) => (
           <div className="dc-site-card" key={site.id}>
-            <div className="dc-site-thumb">
-              <img src={site.squareImg} alt={site.name} loading="lazy" />
+            <div className="dc-site-thumb-wrap">
+              <img
+                className="dc-site-thumb"
+                src={site.squareImg}
+                alt={site.name}
+                loading="lazy"
+              />
             </div>
             <div className="dc-site-body">
-              <div className="dc-site-name">{site.name}</div>
               {(() => {
                 let typeClass = "type-default";
-                let typeText = "캠핑장";
+                let typeText = "";
                 if (site.type === "self-caravan") {
-                  typeClass = "type-caravan";
+                  typeClass = "type-self-caravan";
                   typeText = "자가 카라반";
                 } else if (site.type === "cabana-deck") {
-                  typeClass = "type-cabana";
+                  typeClass = "type-cabana-deck";
                   typeText = "카바나 데크";
                 } else if (site.type === "tent") {
                   typeClass = "type-tent";
@@ -435,3 +422,10 @@ function SiteSelectStep({ data, onChangeFilter, onSelectSite }) {
 }
 
 export default SiteSelectStep;
+
+
+
+
+
+
+

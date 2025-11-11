@@ -16,6 +16,7 @@ function HeroCarousel({ images = defaultImages }) {
   const [isTransitioning, setIsTransitioning] = useState(true);
   const [dragOffset, setDragOffset] = useState(0);
   const intervalRef = useRef(null);
+  const containerRef = useRef(null);
   const dragRef = useRef({
     isDown: false,
     startX: 0,
@@ -42,7 +43,26 @@ function HeroCarousel({ images = defaultImages }) {
 
   useEffect(() => {
     startAuto();
-    return () => stopAuto();
+    const onVis = () => {
+      if (document.hidden) stopAuto();
+      else startAuto();
+    };
+    document.addEventListener("visibilitychange", onVis);
+    // Pause when carousel leaves viewport
+    const target = containerRef.current;
+    let observer = null;
+    if (target && 'IntersectionObserver' in window) {
+      observer = new IntersectionObserver((entries) => {
+        const vis = entries[0]?.isIntersecting;
+        if (vis) startAuto(); else stopAuto();
+      }, { threshold: 0.1 });
+      observer.observe(target);
+    }
+    return () => {
+      document.removeEventListener("visibilitychange", onVis);
+      if (observer) observer.disconnect();
+      stopAuto();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [total]);
 
@@ -146,9 +166,13 @@ function HeroCarousel({ images = defaultImages }) {
     setCurrentIndex(i + 1);
   };
 
+  // Ensure indicator stays within 1..total even if transitions are paused
+  const displayIndex = ((currentIndex - 1 + total) % total) + 1;
+
   return (
     <div
       className="dc-hero-carousel"
+      ref={containerRef}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
@@ -186,14 +210,14 @@ function HeroCarousel({ images = defaultImages }) {
         })}
       </div>
       <div className="dc-hero-page-indicator-fixed">
-        {realIndex} / {total}
+        {displayIndex} / {total}
       </div>
       <div className="dc-hero-dots">
         {images.map((_, i) => (
           <button
             key={i}
             type="button"
-            className={"dc-hero-dot" + (i + 1 === realIndex ? " active" : "")}
+            className={"dc-hero-dot" + (i + 1 === displayIndex ? " active" : "")}
             onClick={() => goTo(i)}
           />
         ))}

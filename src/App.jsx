@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import "./index.css";
 import Footer from "./components/Footer";
 import StepHeader from "./components/StepHeader";
@@ -12,47 +12,19 @@ function App() {
   const [quickData, setQuickData] = useState(null);
   const [selectedSite, setSelectedSite] = useState(null);
 
-  const goHome = () => {
-    setStep("home");
-    setSelectedSite(null);
-  };
-
-  const handleQuickNext = (payload) => {
-    setQuickData(payload);
-    setSelectedSite(null);
-    setStep("select-site");
-  };
-
-  const handleSiteSelect = (site) => {
-    setSelectedSite(site);
-    setStep("site-detail");
-  };
-
-  const handleGoConfirm = () => {
-    setStep("confirm");
-  };
-
-  const handleUpdateDatesFromDetail = (partial) => {
-    setQuickData((prev) => ({
-      ...(prev || {}),
-      ...partial,
-    }));
-  };
+  const goHome = () => { setStep("home"); setSelectedSite(null); };
+  const handleQuickNext = (payload) => { setQuickData(payload); setSelectedSite(null); setStep("select-site"); };
+  const handleSiteSelect = (site) => { setSelectedSite(site); setStep("site-detail"); };
+  const handleGoConfirm = () => setStep("confirm");
+  const handleUpdateDatesFromDetail = (partial) => { setQuickData((prev) => ({ ...(prev || {}), ...partial })); };
 
   const headerTitle = getHeaderTitle(step, quickData, selectedSite);
 
   const handleBack = () => {
-    if (step === "select-site") {
-      setStep("home");
-      setSelectedSite(null);
-    } else if (step === "site-detail") {
-      setStep("select-site");
-      setSelectedSite(null);
-    } else if (step === "confirm") {
-      setStep("site-detail");
-    } else {
-      goHome();
-    }
+    if (step === "select-site") { setStep("home"); setSelectedSite(null); }
+    else if (step === "site-detail") { setStep("select-site"); setSelectedSite(null); }
+    else if (step === "confirm") { setStep("site-detail"); }
+    else { goHome(); }
   };
 
   return (
@@ -89,32 +61,20 @@ function App() {
   );
 }
 
-function getHeaderTitle(step, quickData, selectedSite) {
+function getTypeLabel(quickData) {
   const t = quickData?.siteType;
-  const typeLabel =
-    t === "self-caravan"
-      ? "자가 카라반"
-      : t === "cabana-deck"
-      ? "카바나 데크"
-      : t === "tent"
-      ? "텐트 사이트"
-      : t === "lodging"
-      ? "숙박 시설"
-      : "캠핑장";
+  if (t === "self-caravan") return "자가 카라반";
+  if (t === "cabana-deck") return "카바나 데크";
+  if (t === "tent") return "텐트 사이트";
+  if (t === "lodging") return "숙박 시설";
+  return "캠핑";
+}
 
-  if (step === "select-site") {
-    return `${typeLabel} 사이트 선택`;
-  }
-
-  if (step === "site-detail") {
-    if (selectedSite?.name) return selectedSite.name;
-    return `${typeLabel} 사이트 상세`;
-  }
-
-  if (step === "confirm") {
-    return "예약하기";
-  }
-
+function getHeaderTitle(step, quickData, selectedSite) {
+  const typeLabel = getTypeLabel(quickData);
+  if (step === "select-site") return `${typeLabel} 사이트 선택`;
+  if (step === "site-detail") return "예약 상세보기";
+  if (step === "confirm") return "예약하기";
   return "예약 단계";
 }
 

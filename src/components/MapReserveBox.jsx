@@ -46,7 +46,10 @@ function MapReserveBox() {
   return (
     <form className="dc-qb dc-qb-map" onSubmit={handleSubmit}>
       <div className="dc-qb-header dc-qb-header-blue">
-        <div className="dc-qb-title dc-qb-map-title">🗺️ 지도에서 선택</div>
+        <div className="dc-qb-title dc-qb-map-title">
+          <span className="dc-qb-title-icon">🗺️</span>
+          지도에서 선택
+        </div>
       </div>
 
       <div className="dc-qb-type-label">

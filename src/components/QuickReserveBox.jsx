@@ -35,7 +35,7 @@ function QuickReserveBox({ onNext }) {
   const rangeText =
     checkIn && checkOut
       ? `${formatDateLabel(checkIn)} ~ ${formatDateLabel(checkOut)}`
-      : "날짜를 선택해주세요";
+      : "날짜선택";
 
   const openDateSheet = () => {
     setError("");
@@ -197,7 +197,10 @@ function QuickReserveBox({ onNext }) {
     <>
       <form className="dc-qb dc-qb-quick" onSubmit={handleSubmit}>
         <div className="dc-qb-header dc-qb-header-green">
-          <div className="dc-qb-title">⚡ 빠른 예약</div>
+          <div className="dc-qb-title">
+            <span className="dc-qb-title-icon">⚡</span>
+            빠른 예약
+          </div>
         </div>
 
         <div className="dc-qb-bar-row">
@@ -208,18 +211,20 @@ function QuickReserveBox({ onNext }) {
           >
             <div className="dc-qb-btn-label">
               <span className="dc-qb-bar-icon">📅</span>
-              <span
-                className={
-                  checkIn && checkOut
-                    ? "dc-qb-btn-main"
-                    : "dc-qb-btn-main dc-qb-bar-placeholder"
-                }
-              >
-                {rangeText}
-              </span>
-            </div>
-            <div className="dc-qb-btn-sub">
-              {checkIn && dDay !== null ? `D-${dDay}` : "날짜 선택"}
+              <div className="dc-qb-btn-info">
+                <span
+                  className={
+                    checkIn && checkOut
+                      ? "dc-qb-btn-main"
+                      : "dc-qb-btn-main dc-qb-bar-placeholder"
+                  }
+                >
+                  {checkIn && checkOut ? rangeText : "날짜선택"}
+                </span>
+                <span className="dc-qb-btn-sub">
+                  {checkIn && dDay !== null ? `D-${dDay}` : "D-day"}
+                </span>
+              </div>
             </div>
           </button>
 
@@ -230,9 +235,11 @@ function QuickReserveBox({ onNext }) {
           >
             <div className="dc-qb-btn-label">
               <span className="dc-qb-bar-icon">👤</span>
-              <span className="dc-qb-btn-main">인원 {people}명</span>
+              <div className="dc-qb-btn-info">
+                <span className="dc-qb-btn-main">인원 {people}명</span>
+                <span className="dc-qb-btn-sub">변경</span>
+              </div>
             </div>
-            <div className="dc-qb-btn-sub">변경</div>
           </button>
         </div>
 
