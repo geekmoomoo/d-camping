@@ -7,6 +7,7 @@ import HomePage from "./pages/HomePage";
 import SiteDetailStep from "./pages/SiteDetailStep";
 import SiteSelectStep from "./pages/SiteSelectStep";
 
+
 function App() {
   const [step, setStep] = useState("home");
   const [quickData, setQuickData] = useState(null);

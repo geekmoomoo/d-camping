@@ -3,10 +3,15 @@ import FeatureSection from "../components/FeatureSection";
 import Footer from "../components/Footer";
 import Header from "../components/Header";
 import HeroCarousel from "../components/HeroCarousel";
-import MapReserveBox from "../components/MapReserveBox";
+import MapSelector from "../components/MapSelector";
 import QuickReserveBox from "../components/QuickReserveBox";
 
 function HomePage({ onQuickNext }) {
+  const handleMapNext = (site) => {
+    // TODO: replace with actual routing/step change once map flow is ready
+    console.log("Map selection:", site);
+  };
+
   return (
     <>
       <Header />
@@ -17,7 +22,7 @@ function HomePage({ onQuickNext }) {
           </div>
           <div className="dc-hero-search">
             <QuickReserveBox onNext={onQuickNext} />
-            <MapReserveBox />
+            <MapSelector onNext={handleMapNext} />
           </div>
         </section>
         <FeatureSection />
