@@ -1,34 +1,10 @@
 import React from "react";
-
-const toISO = (d) => {
-  if (!d) return "";
-  const date = d instanceof Date ? new Date(d) : new Date(d);
-  date.setHours(0, 0, 0, 0);
-  return date.toISOString().slice(0, 10);
-};
-
-const parseISO = (iso) => {
-  if (!iso) return null;
-  const [y, m, day] = iso.split("-").map(Number);
-  const d = new Date(y, m - 1, day);
-  d.setHours(0, 0, 0, 0);
-  return d;
-};
-
-const compareISO = (a, b) => {
-  if (!a || !b) return 0;
-  if (a < b) return -1;
-  if (a > b) return 1;
-  return 0;
-};
-
-const formatDateLabel = (iso) => {
-  if (!iso) return "";
-  const d = parseISO(iso);
-  const m = d.getMonth() + 1;
-  const day = d.getDate();
-  return `${m}/${day}`;
-};
+import {
+  compareISO,
+  formatDateLabel,
+  parseISO,
+  toISO,
+} from "../utils/date";
 
 function CalendarGrid({
   cells,
