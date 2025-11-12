@@ -17,9 +17,17 @@ const fallbackImages = [
   "/site_img/site_004.jpg",
 ];
 
+const TYPE_LABELS = {
+  "self-caravan": "자가 카라반존",
+  "cabana-deck": "카바나 데크존",
+  tent: "캠핑 사이트",
+  lodging: "숙박시설",
+};
+
 function SiteDetailStep({ data, site, onReserve, onUpdateDates }) {
   const metaTitle = site?.name || "카바나 데크";
   const images = site?.images?.length ? site.images : fallbackImages;
+  const typeLabel = TYPE_LABELS[site?.type] || "캠핑";
 
   const [checkIn, setCheckIn] = useState(data?.checkIn || "");
   const [checkOut, setCheckOut] = useState(data?.checkOut || "");
@@ -143,7 +151,7 @@ function SiteDetailStep({ data, site, onReserve, onUpdateDates }) {
         <div className="dc-site-info-block">
           <div className="dc-site-title">{metaTitle}</div>
           <div className="dc-site-subrow">
-            <span className="dc-site-pill">카바나 데크</span>
+            <span className="dc-site-pill">{typeLabel}</span>
             <span className="dc-site-time">입실 13:00 - 퇴실 11:00</span>
           </div>
           <div className="dc-site-people">

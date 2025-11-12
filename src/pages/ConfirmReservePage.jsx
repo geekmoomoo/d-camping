@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { diffDays, formatDateLabel, toISO } from "../utils/date";
 
-function ConfirmReservePage({ quickData }) {
+function ConfirmReservePage({ quickData, site }) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const todayISO = toISO(today);
@@ -90,12 +90,21 @@ function ConfirmReservePage({ quickData }) {
     alert("예약 정보가 완료되었습니다. (실제 결제/전송 로직 연동 필요)");
   };
 
-  return (
-    <form className="dc-step-card dc-confirm-wrap" onSubmit={handleSubmit}>
-      <div className="dc-confirm-top">
-        <div className="dc-confirm-camp-name">카바나 데크</div>
+  const displayTitle = site?.name || "캠핑장 예약";
+  const isFormReady =
+    Boolean(name.trim() && phone.trim() && checkIn && checkOut) &&
+    agree.a1 &&
+    agree.a2 &&
+    agree.a3 &&
+    agree.a4 &&
+    agree.a5;
 
-        <div className="dc-confirm-date-cards">
+  return (
+      <form className="dc-step-card dc-confirm-wrap" onSubmit={handleSubmit}>
+        <div className="dc-confirm-top">
+          <div className="dc-confirm-camp-name">{displayTitle}</div>
+
+          <div className="dc-confirm-date-cards">
           <div className="dc-confirm-date-card">
             <div className="label">입실일</div>
             <div className="date">
@@ -278,8 +287,12 @@ function ConfirmReservePage({ quickData }) {
       </section>
 
       <div className="dc-confirm-submit-wrap">
-        <button type="submit" className="dc-confirm-submit-btn">
-          예약 신청 완료하기
+        <button
+          type="submit"
+          className="dc-confirm-submit-btn"
+          disabled={!isFormReady}
+        >
+          정보 입력 후 신청완료
         </button>
       </div>
     </form>

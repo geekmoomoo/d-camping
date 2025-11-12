@@ -161,14 +161,6 @@ function SiteSelectStep({ data, onChangeFilter, onSelectSite }) {
 
   return (
     <section className="dc-step-card dc-site-select-card">
-      <header className="dc-filter-card">
-        <div className="dc-filter-combo">
-          <button type="button" className="dc-filter-seg dc-filter-date" onClick={openDateSheet}>{checkIn || checkOut ? rangeText : "날짜선택"}</button>
-          <span className="dc-filter-divider" aria-hidden="true" />
-          <button type="button" className="dc-filter-seg dc-filter-people" onClick={openPeopleSheet}>{`인원 ${people}`}</button>
-        </div>
-      </header>
-
       <div className="dc-site-grid-wrapper">
         <div className="dc-site-grid">
           {filteredSites.map((site) => (
@@ -230,8 +222,25 @@ function SiteSelectStep({ data, onChangeFilter, onSelectSite }) {
               </div>
             </div>
           </div>
-          ))}
-        </div>
+        ))}
+      </div>
+    </div>
+
+    <div className="dc-fixed-filter-bar">
+        <button
+          type="button"
+          className="dc-fixed-filter-btn"
+          onClick={openDateSheet}
+        >
+          {checkIn || checkOut ? rangeText : "날짜선택"}
+        </button>
+        <button
+          type="button"
+          className="dc-fixed-filter-btn"
+          onClick={openPeopleSheet}
+        >
+          {`인원 ${people}`}
+        </button>
       </div>
 
       {isDateSheetOpen && (

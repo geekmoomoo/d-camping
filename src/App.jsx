@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import "./index.css";
 import Footer from "./components/Footer";
+import Header from "./components/Header";
 import StepHeader from "./components/StepHeader";
 import ConfirmReservePage from "./pages/ConfirmReservePage";
 import HomePage from "./pages/HomePage";
@@ -37,10 +38,16 @@ function App() {
     window.scrollTo({ top: 0, left: 0 });
   }, [step]);
 
+  const isHome = step === "home";
+  const pageClassName = `dc-page ${isHome ? "dc-page--home" : "dc-page--step"}`;
+
   return (
-    <div className="dc-page">
-      {step === "home" ? (
-        <HomePage onQuickNext={handleQuickNext} onMapNext={handleMapNext} />
+    <div className={pageClassName}>
+      {isHome && <Header />}
+      {isHome ? (
+        <main className="dc-home-main">
+          <HomePage onQuickNext={handleQuickNext} onMapNext={handleMapNext} />
+        </main>
       ) : (
         <>
           <StepHeader title={headerTitle} onBack={handleBack} onHome={goHome} />
@@ -64,9 +71,9 @@ function App() {
               <ConfirmReservePage quickData={quickData} site={selectedSite} />
             )}
           </main>
-          <Footer />
         </>
       )}
+      <Footer />
     </div>
   );
 }
