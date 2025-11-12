@@ -137,6 +137,21 @@ function SiteSelectStep({ data, onChangeFilter, onSelectSite }) {
   while (cells.length % 7 !== 0) cells.push(null);
   while (cells.length < 42) cells.push(null);
 
+  const hasFullDateRange =
+    checkIn && checkOut && compareISO(checkOut, checkIn) > 0;
+  const stayNights = hasFullDateRange ? diffDays(checkIn, checkOut) : null;
+  const canApplyDates = stayNights !== null && stayNights >= 1;
+  const dateActionLabel = canApplyDates ? (
+    <>
+      <span className="dc-stay-highlight">
+        {stayNights}박 {stayNights + 1}일
+      </span>{" "}
+      적용하기
+    </>
+  ) : (
+    "날짜를 선택해주세요"
+  );
+
   const filteredSites = useMemo(() => {
     if (data?.siteType && data.siteType !== "all") {
       return mockSites.filter((s) => s.type === data.siteType);
@@ -232,12 +247,28 @@ function SiteSelectStep({ data, onChangeFilter, onSelectSite }) {
 
             <div className="dc-qb-date-tabs">
               <div className="active">
-                {checkIn ? `입실일 ${formatDateLabel(checkIn)}` : "입실일 선택"}
+                {checkIn ? (
+                  <>
+                    입실일{" "}
+                    <span className="dc-qb-date-highlight">
+                      {formatDateLabel(checkIn)}
+                    </span>
+                  </>
+                ) : (
+                  "입실일 선택"
+                )}
               </div>
               <div className="active">
-                {checkOut
-                  ? `퇴실일 ${formatDateLabel(checkOut)}`
-                  : "퇴실일 선택"}
+                {checkOut ? (
+                  <>
+                    퇴실일{" "}
+                    <span className="dc-qb-date-highlight">
+                      {formatDateLabel(checkOut)}
+                    </span>
+                  </>
+                ) : (
+                  "퇴실일 선택"
+                )}
               </div>
             </div>
 
@@ -257,8 +288,9 @@ function SiteSelectStep({ data, onChangeFilter, onSelectSite }) {
               type="button"
               className="dc-qb-sheet-btn"
               onClick={handleDateConfirm}
+              disabled={!canApplyDates}
             >
-              적용하기
+              {dateActionLabel}
             </button>
           </div>
         </>
@@ -275,7 +307,8 @@ function SiteSelectStep({ data, onChangeFilter, onSelectSite }) {
               </button>
             </div>
             <div className="dc-qb-sheet-sub">
-              유아 및 아동도 인원수에 포함해주세요.
+              <span className="dc-text-orange">유아 및 아동</span>도 인원수에{" "}
+              <span className="dc-text-orange">포함</span>해주세요.
             </div>
             <div className="dc-qb-people-row">
               <span>인원</span>

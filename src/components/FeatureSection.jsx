@@ -22,7 +22,7 @@ function FeatureSection() {
         </div>
         <div className="dc-cat-item">
           <div className="dc-cat-icon">🏡</div>
-          <div className="dc-cat-label">숙박 시설</div>
+          <div className="dc-cat-label">팬션</div>
           <div className="dc-cat-desc">가족용 독립형 숙박동.</div>
         </div>
       </div>

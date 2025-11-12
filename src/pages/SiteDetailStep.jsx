@@ -112,6 +112,21 @@ function SiteDetailStep({ data, site, onReserve, onUpdateDates }) {
       ? `${formatDateLabel(checkIn)} ~ ${formatDateLabel(checkOut)}`
       : "입실/퇴실일을 선택해주세요";
 
+  const hasFullDateRange =
+    checkIn && checkOut && compareISO(checkOut, checkIn) > 0;
+  const stayNights = hasFullDateRange ? diffDays(checkIn, checkOut) : null;
+  const canApplyDates = stayNights !== null && stayNights >= 1;
+  const dateActionLabel = canApplyDates ? (
+    <>
+      <span className="dc-stay-highlight">
+        {stayNights}박 {stayNights + 1}일
+      </span>{" "}
+      적용하기
+    </>
+  ) : (
+    "날짜를 선택해주세요"
+  );
+
   const handleReserveClick = () => {
     if (!checkIn || !checkOut) {
       alert("입실일과 퇴실일을 먼저 선택해주세요.");
@@ -232,12 +247,28 @@ function SiteDetailStep({ data, site, onReserve, onUpdateDates }) {
             </div>
             <div className="dc-qb-date-tabs">
               <div className="active">
-                {checkIn ? `입실일 ${formatDateLabel(checkIn)}` : "입실일 선택"}
+                {checkIn ? (
+                  <>
+                    입실일{" "}
+                    <span className="dc-qb-date-highlight">
+                      {formatDateLabel(checkIn)}
+                    </span>
+                  </>
+                ) : (
+                  "입실일 선택"
+                )}
               </div>
               <div className="active">
-                {checkOut
-                  ? `퇴실일 ${formatDateLabel(checkOut)}`
-                  : "퇴실일 선택"}
+                {checkOut ? (
+                  <>
+                    퇴실일{" "}
+                    <span className="dc-qb-date-highlight">
+                      {formatDateLabel(checkOut)}
+                    </span>
+                  </>
+                ) : (
+                  "퇴실일 선택"
+                )}
               </div>
             </div>
             <CalendarGrid
@@ -255,8 +286,9 @@ function SiteDetailStep({ data, site, onReserve, onUpdateDates }) {
               type="button"
               className="dc-qb-sheet-btn"
               onClick={handleDateConfirm}
+              disabled={!canApplyDates}
             >
-              적용하기
+              {dateActionLabel}
             </button>
           </div>
         </>

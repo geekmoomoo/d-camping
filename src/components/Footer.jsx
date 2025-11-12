@@ -6,9 +6,9 @@ function Footer() {
       <div>
         <div className="dc-logo-sm">담양 금성산성 오토캠핑장</div>
         <div>
-          예약·문의 : 010-0000-0000
+          예약·문의 : 1566-0000
           <br />
-          주소 : 전라남도 담양군 (예시 주소)
+          주소 : 전남 담양군 금성면 금성리 960
         </div>
       </div>
       <div>

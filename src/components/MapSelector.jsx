@@ -1,4 +1,10 @@
-import React, { useCallback, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { sites } from "../config/sitesConfig";
 import { mockSites } from "../data/mockSites";
 
@@ -6,8 +12,17 @@ const TYPE_OPTIONS = [
   { label: "자가 카라반", value: "caravan" },
   { label: "카바나 데크", value: "cabana" },
   { label: "텐트 사이트", value: "camp" },
-  { label: "숙박시설", value: "room" },
+  { label: "팬션", value: "room" },
 ];
+
+
+
+const TYPE_FOCUS = {
+  caravan: { scale: 3, center: { x: 49.5, y: 93.5 } },
+  cabana: { scale: 3, center: { x: 50, y: 83 } },
+  camp: { scale: 1.5, center: { x: 50, y: 50 } },
+  room: { scale: 3, center: { x: 53, y: 17 } },
+};
 
 const MIN_ZOOM = 1;
 const MAX_ZOOM = 3.5;
@@ -29,10 +44,10 @@ function MapSelector({ onNext }) {
     origin: { x: 0, y: 0 },
   });
 
-  const filteredSites = useMemo(
-    () => sites.filter((site) => site.type === selectedType),
-    [selectedType]
-  );
+  const filteredSites = useMemo(() => {
+    if (!selectedType) return [];
+    return sites.filter((site) => site.type === selectedType);
+  }, [selectedType]);
 
   const siteDetailsMap = useMemo(() => {
     const map = new Map();
@@ -71,6 +86,54 @@ function MapSelector({ onNext }) {
     []
   );
 
+  const getCenteredOffset = useCallback(
+    (nextScale, centerPercent) => {
+      const frame = frameRef.current;
+      if (!frame) return { x: 0, y: 0 };
+      const { width, height } = frame.getBoundingClientRect();
+      const target = centerPercent
+        ? {
+            x: (centerPercent.x / 100) * width,
+            y: (centerPercent.y / 100) * height,
+          }
+        : { x: width / 2, y: height / 2 };
+      const desiredCenter = { x: width / 2, y: height / 2 };
+      const proposed = {
+        x: desiredCenter.x - target.x * nextScale,
+        y: desiredCenter.y - target.y * nextScale,
+      };
+      return clampOffset(nextScale, proposed);
+    },
+    [clampOffset]
+  );
+
+  const focusOnType = useCallback(
+    (type) => {
+      const focus = TYPE_FOCUS[type];
+      if (!focus) return;
+      const boundedScale = Math.min(
+        MAX_ZOOM,
+        Math.max(MIN_ZOOM, focus.scale || MIN_ZOOM)
+      );
+      setScale(boundedScale);
+      setOffset(getCenteredOffset(boundedScale, focus.center));
+    },
+    [getCenteredOffset]
+  );
+
+  useEffect(() => {
+    if (selectedType) {
+      focusOnType(selectedType);
+    }
+  }, [selectedType, focusOnType]);
+
+  const handleOverview = useCallback(() => {
+    setSelectedSite(null);
+    setSelectedType(null);
+    setScale(1);
+    setOffset(clampOffset(1, { x: 0, y: 0 }));
+  }, [clampOffset]);
+
   const changeZoom = (delta) => {
     setScale((prev) => {
       const next = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, prev + delta));
@@ -82,7 +145,11 @@ function MapSelector({ onNext }) {
   };
 
   const handlePointerDown = (e) => {
-    if (e.target.closest(".map-selector-point")) return;
+    if (
+      e.target.closest(".map-selector-point") ||
+      e.target.closest(".map-selector-overview")
+    )
+      return;
     e.preventDefault();
     const pan = panRef.current;
     if (pan) {
@@ -127,18 +194,12 @@ function MapSelector({ onNext }) {
 
   return (
     <section className="map-selector">
-      <div className="map-selector-header">
-        <div className="map-selector-headline">
-          <span role="img" aria-hidden="true">
-            🗺️
-          </span>
+      <div className="dc-qb-header dc-qb-header-blue">
+        <div className="dc-qb-title">
+          <span className="dc-qb-title-icon">🗺️</span>
           지도에서 선택
         </div>
-        <p className="map-selector-sub">
-          이용 유형을 고르면 해당 구역이 지도 위에 표시됩니다.
-        </p>
       </div>
-
       <div className="map-selector-type-grid">
         {TYPE_OPTIONS.map((option) => (
           <button
@@ -149,8 +210,12 @@ function MapSelector({ onNext }) {
               (selectedType === option.value ? " active" : "")
             }
             onClick={() => {
-              setSelectedType(option.value);
               setSelectedSite(null);
+              if (selectedType === option.value) {
+                focusOnType(option.value);
+              } else {
+                setSelectedType(option.value);
+              }
             }}
           >
             {option.label}
@@ -159,6 +224,13 @@ function MapSelector({ onNext }) {
       </div>
 
       <div className="map-selector-canvas" ref={frameRef}>
+        <button
+          type="button"
+          className="map-selector-overview"
+          onClick={handleOverview}
+        >
+          전체보기
+        </button>
         <div
           ref={panRef}
           className={
@@ -207,14 +279,14 @@ function MapSelector({ onNext }) {
             onClick={() => changeZoom(-ZOOM_STEP)}
             disabled={scale <= MIN_ZOOM}
           >
-            −
+            -
           </button>
           <button
             type="button"
             onClick={() => changeZoom(ZOOM_STEP)}
             disabled={scale >= MAX_ZOOM}
           >
-            ＋
+            +
           </button>
         </div>
       </div>
@@ -225,7 +297,14 @@ function MapSelector({ onNext }) {
         disabled={!selectedSite}
         onClick={handleSubmit}
       >
-        {selectedSite ? `${selectedSite.id} 예약 진행하기` : "다음 단계로 진행"}
+        {selectedSite ? (
+          <>
+            <span className="map-selector-submit-site">{selectedSite.id}</span>{" "}
+            예약하기
+          </>
+        ) : (
+          "다음으로 이동"
+        )}
       </button>
     </section>
   );

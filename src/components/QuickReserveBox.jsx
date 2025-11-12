@@ -31,11 +31,20 @@ function QuickReserveBox({ onNext }) {
   const [calMonth, setCalMonth] = useState(today.getMonth());
 
   const selectingCheckOut = !!checkIn && !checkOut;
+  const hasFullDateRange = Boolean(checkIn && checkOut);
+  const hasSelectedDate = Boolean(checkIn || checkOut);
+  const hasTypeSelection = siteType !== "all";
+  const hasAnySelection = hasSelectedDate || hasTypeSelection;
 
   const rangeText =
     checkIn && checkOut
       ? `${formatDateLabel(checkIn)} ~ ${formatDateLabel(checkOut)}`
       : "날짜선택";
+
+  const submitLabel = hasAnySelection ? "다음 단계로 진행" : "전체 목록 보기";
+  const showResetButton = hasAnySelection;
+  const actionClasses = ["dc-qb-actions", "dc-qb-actions-full"];
+  if (!showResetButton) actionClasses.push("dc-qb-actions-single");
 
   const openDateSheet = () => {
     setError("");
@@ -131,26 +140,34 @@ function QuickReserveBox({ onNext }) {
     e.preventDefault();
     setError("");
 
-    if (!checkIn || !checkOut) {
-      setError("입실/퇴실 날짜를 선택해주세요.");
-      return;
-    }
-    const nights = diffDays(checkIn, checkOut);
-    if (nights < 1 || nights > 10) {
-      setError("예약은 최대 10박까지 가능합니다.");
-      return;
-    }
     if (people < 1) {
       setError("인원을 1명 이상으로 입력해주세요.");
       return;
     }
 
+    const hasPartialDate = hasSelectedDate && !hasFullDateRange;
+    if (hasPartialDate) {
+      setError("입실/퇴실 날짜를 모두 선택해주세요.");
+      return;
+    }
+
+    if (hasFullDateRange) {
+      const nights = diffDays(checkIn, checkOut);
+      if (nights < 1 || nights > 10) {
+        setError("예약은 최대 10박까지 가능합니다.");
+        return;
+      }
+    }
+
     const payload = {
-      checkIn,
-      checkOut,
       people,
       siteType,
     };
+
+    if (hasFullDateRange) {
+      payload.checkIn = checkIn;
+      payload.checkOut = checkOut;
+    }
 
     if (typeof onNext === "function") {
       onNext(payload);
@@ -192,6 +209,22 @@ function QuickReserveBox({ onNext }) {
   }
   while (cells.length % 7 !== 0) cells.push(null);
   while (cells.length < 42) cells.push(null);
+
+  const stayNights =
+    hasFullDateRange && compareISO(checkOut, checkIn) > 0
+      ? diffDays(checkIn, checkOut)
+      : null;
+  const canApplyDates = stayNights !== null && stayNights >= 1;
+  const dateActionLabel = canApplyDates ? (
+    <>
+      <span className="dc-stay-highlight">
+        {stayNights}박 {stayNights + 1}일
+      </span>{" "}
+      적용하기
+    </>
+  ) : (
+    "날짜를 선택해주세요"
+  );
 
   return (
     <>
@@ -267,26 +300,27 @@ function QuickReserveBox({ onNext }) {
             onChange={setSiteType}
           />
           <SiteTypeButton
-            label="숙박 시설"
+            label="팬션"
             value="lodging"
             siteType={siteType}
             onChange={setSiteType}
           />
         </div>
 
-        <div className="dc-qb-actions dc-qb-actions-full">
+        <div className={actionClasses.join(" ")}>
           <button type="submit" className="dc-btn-primary">
-            다음 단계로 진행
+            {submitLabel}
           </button>
-          <button
-            type="button"
-            className="dc-btn-outline"
-            onClick={handleReset}
-          >
-            초기화
-          </button>
+          {showResetButton && (
+            <button
+              type="button"
+              className="dc-btn-outline"
+              onClick={handleReset}
+            >
+              초기화
+            </button>
+          )}
         </div>
-
         {error && <div className="dc-qb-error">{error}</div>}
         <p className="dc-qb-helper">
           예약은 오늘부터 한 달 이내, 최대 10박까지 선택 가능
@@ -306,12 +340,28 @@ function QuickReserveBox({ onNext }) {
 
             <div className="dc-qb-date-tabs">
               <div className="active">
-                {checkIn ? `입실일 ${formatDateLabel(checkIn)}` : "입실일 선택"}
+                {checkIn ? (
+                  <>
+                    입실일{" "}
+                    <span className="dc-qb-date-highlight">
+                      {formatDateLabel(checkIn)}
+                    </span>
+                  </>
+                ) : (
+                  "입실일 선택"
+                )}
               </div>
               <div className="active">
-                {checkOut
-                  ? `퇴실일 ${formatDateLabel(checkOut)}`
-                  : "퇴실일 선택"}
+                {checkOut ? (
+                  <>
+                    퇴실일{" "}
+                    <span className="dc-qb-date-highlight">
+                      {formatDateLabel(checkOut)}
+                    </span>
+                  </>
+                ) : (
+                  "퇴실일 선택"
+                )}
               </div>
             </div>
 
@@ -331,8 +381,9 @@ function QuickReserveBox({ onNext }) {
               type="button"
               className="dc-qb-sheet-btn"
               onClick={handleDateConfirm}
+              disabled={!canApplyDates}
             >
-              적용하기
+              {dateActionLabel}
             </button>
           </div>
         </>
@@ -349,7 +400,8 @@ function QuickReserveBox({ onNext }) {
               </button>
             </div>
             <div className="dc-qb-sheet-sub">
-              유아 및 아동도 인원수에 포함해주세요.
+              <span className="dc-text-orange">유아 및 아동</span>도 인원수에{" "}
+              <span className="dc-text-orange">포함</span>해주세요.
             </div>
             <div className="dc-qb-people-row">
               <span>인원</span>
