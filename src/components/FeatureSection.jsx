@@ -3,7 +3,7 @@ import React from "react";
 function FeatureSection() {
   return (
     <section className="dc-section">
-      <h2>이 캠핑장에서 누릴 수 있는 것들</h2>
+      <h2>유형별 특징</h2>
       <div className="dc-cat-grid">
         <div className="dc-cat-item">
           <div className="dc-cat-icon">🚙</div>

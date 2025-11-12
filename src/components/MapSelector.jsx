@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo, useRef, useState } from "react";
 import { sites } from "../config/sitesConfig";
+import { mockSites } from "../data/mockSites";
 
 const TYPE_OPTIONS = [
   { label: "자가 카라반", value: "caravan" },
@@ -33,8 +34,18 @@ function MapSelector({ onNext }) {
     [selectedType]
   );
 
+  const siteDetailsMap = useMemo(() => {
+    const map = new Map();
+    mockSites.forEach((detail) => map.set(detail.id, detail));
+    return map;
+  }, []);
+
   const handleSelectSite = (site) => {
-    setSelectedSite(site);
+    const detail = siteDetailsMap.get(site.id);
+    const nextSite = detail
+      ? { ...detail, x: site.x, y: site.y }
+      : { ...site, name: site.id, zone: site.id, carOption: "" };
+    setSelectedSite(nextSite);
   };
 
   const handleSubmit = () => {

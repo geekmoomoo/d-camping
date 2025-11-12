@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import "./index.css";
 import Footer from "./components/Footer";
 import StepHeader from "./components/StepHeader";
@@ -16,6 +16,11 @@ function App() {
   const goHome = () => { setStep("home"); setSelectedSite(null); };
   const handleQuickNext = (payload) => { setQuickData(payload); setSelectedSite(null); setStep("select-site"); };
   const handleSiteSelect = (site) => { setSelectedSite(site); setStep("site-detail"); };
+  const handleMapNext = (site) => {
+    setQuickData(null);
+    setSelectedSite(site);
+    setStep("site-detail");
+  };
   const handleGoConfirm = () => setStep("confirm");
   const handleUpdateDatesFromDetail = (partial) => { setQuickData((prev) => ({ ...(prev || {}), ...partial })); };
 
@@ -28,10 +33,14 @@ function App() {
     else { goHome(); }
   };
 
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0 });
+  }, [step]);
+
   return (
     <div className="dc-page">
       {step === "home" ? (
-        <HomePage onQuickNext={handleQuickNext} />
+        <HomePage onQuickNext={handleQuickNext} onMapNext={handleMapNext} />
       ) : (
         <>
           <StepHeader title={headerTitle} onBack={handleBack} onHome={goHome} />

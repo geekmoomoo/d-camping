@@ -6,10 +6,11 @@ import HeroCarousel from "../components/HeroCarousel";
 import MapSelector from "../components/MapSelector";
 import QuickReserveBox from "../components/QuickReserveBox";
 
-function HomePage({ onQuickNext }) {
+function HomePage({ onQuickNext, onMapNext }) {
   const handleMapNext = (site) => {
-    // TODO: replace with actual routing/step change once map flow is ready
-    console.log("Map selection:", site);
+    if (typeof onMapNext === "function") {
+      onMapNext(site);
+    }
   };
 
   return (
