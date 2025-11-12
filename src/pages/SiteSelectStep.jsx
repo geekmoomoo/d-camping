@@ -145,7 +145,7 @@ function SiteSelectStep({ data, onChangeFilter, onSelectSite }) {
   }, [data?.siteType]);
 
   return (
-    <section className="dc-step-card">
+    <section className="dc-step-card dc-site-select-card">
       <header className="dc-filter-card">
         <div className="dc-filter-combo">
           <button type="button" className="dc-filter-seg dc-filter-date" onClick={openDateSheet}>{checkIn || checkOut ? rangeText : "날짜선택"}</button>
@@ -154,9 +154,10 @@ function SiteSelectStep({ data, onChangeFilter, onSelectSite }) {
         </div>
       </header>
 
-      <div className="dc-site-grid">
-        {filteredSites.map((site) => (
-          <div className="dc-site-card" key={site.id}>
+      <div className="dc-site-grid-wrapper">
+        <div className="dc-site-grid">
+          {filteredSites.map((site) => (
+            <div className="dc-site-card" key={site.id}>
             <div className="dc-site-thumb-wrap">
               <img
                 className="dc-site-thumb"
@@ -214,7 +215,8 @@ function SiteSelectStep({ data, onChangeFilter, onSelectSite }) {
               </div>
             </div>
           </div>
-        ))}
+          ))}
+        </div>
       </div>
 
       {isDateSheetOpen && (
