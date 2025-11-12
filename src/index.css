@@ -2,39 +2,25 @@
    Global Theme
    ========================================================= */
 :root {
-  --dc-bg: #02150f;
-  --dc-bg-alt: #0b2b1a;
-  --dc-surface: rgba(15, 23, 20, 0.88);
-  --dc-surface-strong: rgba(11, 40, 26, 0.94);
-  --dc-card: rgba(7, 19, 12, 0.92);
-  --dc-border: rgba(157, 213, 190, 0.24);
-  --dc-border-strong: rgba(157, 213, 190, 0.45);
-  --dc-text: #f0f6ec;
-  --dc-muted: #b0c6b5;
-  --dc-muted-soft: rgba(176, 198, 181, 0.45);
-  --dc-accent: #8fd3b8;
-  --dc-accent-strong: #53b185;
-  --dc-blue: #5fc5d5;
-  --dc-blue-strong: #3ba4c4;
-  --dc-orange: #f1a65e;
-  --dc-danger: #ec6b6b;
-  --dc-radius-lg: 24px;
-  --dc-radius-md: 16px;
-  --dc-radius-sm: 10px;
-  --dc-gutter: clamp(18px, 2vw, 32px);
-  --dc-shadow-lg: 0 30px 80px rgba(4, 10, 7, 0.75);
-  --dc-shadow-md: 0 18px 45px rgba(4, 10, 7, 0.55);
-  --dc-shadow-sm: 0 12px 25px rgba(4, 10, 7, 0.4);
-  --dc-bamboo-texture: repeating-linear-gradient(
-    115deg,
-    rgba(255, 255, 255, 0.06),
-    rgba(255, 255, 255, 0.06) 2px,
-    transparent 2px,
-    transparent 6px
-  );
-  --dc-hill: #0f3d27;
-  --dc-mist: rgba(142, 223, 192, 0.18);
+  --dc-bg: #0f1f17;
+  --dc-bg-alt: #142d23;
+  --dc-card: #11271f;
+  --dc-card-strong: #1c2f24;
+  --dc-border: rgba(210, 229, 212, 0.3);
+  --dc-border-strong: rgba(210, 229, 212, 0.55);
+  --dc-text: #f3f9f0;
+  --dc-muted: #cfdcd1;
+  --dc-accent: #78b985;
+  --dc-accent-strong: #3f8a5c;
+  --dc-shadow-lg: 0 30px 60px rgba(3, 7, 4, 0.65);
+  --dc-shadow-md: 0 16px 36px rgba(3, 7, 4, 0.55);
+  --dc-shadow-sm: 0 10px 22px rgba(3, 7, 4, 0.45);
+  --dc-radius-lg: 20px;
+  --dc-radius-md: 14px;
+  --dc-radius-sm: 8px;
+  --dc-gutter: clamp(14px, 3vw, 32px);
   --dc-step-header-height: 74px;
+  --dc-wood: linear-gradient(180deg, rgba(13, 24, 17, 0.92), rgba(4, 9, 7, 0.94));
 }
 
 *,
@@ -50,9 +36,8 @@ body,
 
 body {
   margin: 0;
-  font-family: "Pretendard", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-  background: radial-gradient(circle at 20% -10%, rgba(95, 197, 213, 0.08), transparent 45%),
-    linear-gradient(160deg, #0a2417, #04120e 65%, #02070a 100%);
+  font-family: "Noto Sans KR", "Pretendard", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  background: linear-gradient(180deg, #0a1d15, #050a06 70%);
   color: var(--dc-text);
   -webkit-font-smoothing: antialiased;
   position: relative;
@@ -62,11 +47,11 @@ body::after {
   content: "";
   position: fixed;
   inset: 0;
-  background: var(--dc-bamboo-texture);
-  opacity: 0.85;
+  background: radial-gradient(circle at top left, rgba(142, 223, 192, 0.25), transparent 35%);
+  opacity: 0.6;
   pointer-events: none;
-  z-index: -1;
   mix-blend-mode: soft-light;
+  z-index: -1;
 }
 
 img {
@@ -95,43 +80,24 @@ button {
 
 .dc-page {
   min-height: 100vh;
-  background: radial-gradient(circle at 15% 0%, rgba(96, 181, 154, 0.08), transparent 50%),
-    radial-gradient(circle at 85% 10%, rgba(14, 86, 50, 0.18), transparent 50%),
-    linear-gradient(180deg, #02120f, #041a12 60%, #02130c 100%);
+  background: linear-gradient(180deg, #07170f, #030806);
   position: relative;
   overflow-x: hidden;
+  padding-bottom: 80px;
 }
 
-.dc-page::before {
-  content: "";
-  position: absolute;
-  inset: 120px 8vw auto 8vw;
-  height: 360px;
-  background: radial-gradient(circle at 50% 20%, rgba(143, 208, 184, 0.25), transparent 55%);
-  filter: blur(60px);
-  opacity: 0.6;
-  z-index: -1;
-}
-
+.dc-page::before,
 .dc-page::after {
-  content: "";
-  position: absolute;
-  inset: auto 10vw 0 10vw;
-  height: 260px;
-  background: radial-gradient(circle at 50% 30%, rgba(10, 40, 24, 0.9), rgba(10, 57, 26, 0.5) 60%, transparent 90%);
-  border-bottom-left-radius: 50%;
-  border-bottom-right-radius: 50%;
-  z-index: -2;
-  filter: blur(10px);
+  display: none;
 }
 
-main {
-  width: min(1200px, calc(100% - 2 * var(--dc-gutter)));
+.dc-page main {
+  width: min(1100px, calc(100% - 2 * var(--dc-gutter)));
   margin: 0 auto;
-  padding: clamp(32px, 4vw, 56px) 0 64px;
+  padding: clamp(32px, 4vw, 60px) 0 80px;
   display: flex;
   flex-direction: column;
-  gap: clamp(32px, 4vw, 48px);
+  gap: clamp(28px, 3vw, 42px);
 }
 
 h1,
@@ -158,8 +124,8 @@ p {
 .dc-step-card,
 .dc-confirm-section {
   border-radius: var(--dc-radius-lg);
-  border: 1px solid var(--dc-border);
-  background: linear-gradient(160deg, rgba(8, 26, 14, 0.95), rgba(6, 23, 16, 0.88));
+  border: 1px solid var(--dc-border-strong);
+  background: var(--dc-card);
   box-shadow: var(--dc-shadow-md);
   padding: clamp(20px, 3vw, 28px);
   position: relative;
@@ -172,7 +138,8 @@ p {
   content: "";
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle at top right, rgba(143, 208, 184, 0.08), transparent 55%);
+  background: radial-gradient(circle at top right, rgba(143, 208, 184, 0.12), transparent 55%);
+  mix-blend-mode: soft-light;
   pointer-events: none;
 }
 
@@ -844,10 +811,8 @@ p {
   align-items: center;
   gap: 8px;
   position: relative;
-  border-radius: var(--dc-radius-lg);
-  padding: 12px 18px;
-  background: linear-gradient(120deg, #0f3f22, rgba(9, 18, 12, 0.95));
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 10px 20px rgba(0, 0, 0, 0.6);
+  padding: 0;
+  border-radius: 0;
 }
 
 .map-selector-headline::after {

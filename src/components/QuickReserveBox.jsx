@@ -197,7 +197,7 @@ function QuickReserveBox({ onNext }) {
     <>
       <form className="dc-qb dc-qb-quick" onSubmit={handleSubmit}>
         <div className="dc-qb-header dc-qb-header-green">
-          <div className="dc-qb-title">
+        <div className="dc-qb-title">
             <span className="dc-qb-title-icon">⚡</span>
             빠른 예약
           </div>
