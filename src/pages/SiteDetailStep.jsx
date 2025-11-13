@@ -1,3 +1,4 @@
+// src/pages/SiteDetailStep.jsx
 import React, { useEffect, useState } from "react";
 import CalendarGrid from "../components/CalendarGrid";
 import CancelPolicyAccordion from "../components/CancelPolicyAccordion";
@@ -21,13 +22,17 @@ const TYPE_LABELS = {
   "self-caravan": "자가 카라반존",
   "cabana-deck": "카바나 데크존",
   tent: "캠핑 사이트",
-  lodging: "숙박시설",
+  pension: "숙박 시설",
 };
 
 function SiteDetailStep({ data, site, onReserve, onUpdateDates }) {
-  const metaTitle = site?.name || "카바나 데크";
+  const metaTitle = site?.name || "캠핑 사이트";
   const images = site?.images?.length ? site.images : fallbackImages;
   const typeLabel = TYPE_LABELS[site?.type] || "캠핑";
+
+  const basePeople = site?.basePeople ?? 4;
+  const maxPeople = site?.maxPeople ?? 5;
+  const extraPerPerson = site?.extraPerPerson ?? 10000;
 
   const [checkIn, setCheckIn] = useState(data?.checkIn || "");
   const [checkOut, setCheckOut] = useState(data?.checkOut || "");
@@ -79,17 +84,20 @@ function SiteDetailStep({ data, site, onReserve, onUpdateDates }) {
     if (!iso) return;
     const todayISO = toISO(today);
 
+    // 체크인 선택 단계
     if (!selectingCheckOut) {
       if (
         compareISO(iso, todayISO) < 0 ||
         compareISO(iso, maxCheckInISO) > 0
-      )
+      ) {
         return;
+      }
       setCheckIn(iso);
       setCheckOut("");
       return;
     }
 
+    // 체크아웃 선택 단계
     if (compareISO(iso, checkIn) <= 0) return;
     const nights = diffDays(checkIn, iso);
     if (nights < 1 || nights > 10) return;
@@ -118,13 +126,14 @@ function SiteDetailStep({ data, site, onReserve, onUpdateDates }) {
   const rangeText =
     checkIn && checkOut
       ? `${formatDateLabel(checkIn)} ~ ${formatDateLabel(checkOut)}`
-      : "입실/퇴실일을 선택해주세요";
+      : "입실/퇴실을 선택해 주세요";
 
   const hasFullDateRange =
     checkIn && checkOut && compareISO(checkOut, checkIn) > 0;
   const stayNights = hasFullDateRange ? diffDays(checkIn, checkOut) : null;
   const stayLengthText =
-    stayNights !== null ? `${stayNights}박${stayNights + 1}일` : "0박0일";
+    stayNights !== null ? `${stayNights}박 ${stayNights + 1}일` : "0박 0일";
+
   const canApplyDates = stayNights !== null && stayNights >= 1;
   const dateActionLabel = canApplyDates ? (
     <>
@@ -134,12 +143,12 @@ function SiteDetailStep({ data, site, onReserve, onUpdateDates }) {
       적용하기
     </>
   ) : (
-    "날짜를 선택해주세요"
+    "날짜를 선택해 주세요"
   );
 
   const handleReserveClick = () => {
     if (!checkIn || !checkOut) {
-      alert("입실일과 퇴실일을 먼저 선택해주세요.");
+      alert("입실일과 퇴실일을 먼저 선택해 주세요.");
       return;
     }
     if (typeof onReserve === "function") onReserve();
@@ -154,11 +163,11 @@ function SiteDetailStep({ data, site, onReserve, onUpdateDates }) {
           <div className="dc-site-title">{metaTitle}</div>
           <div className="dc-site-subrow">
             <span className="dc-site-pill">{typeLabel}</span>
-            <span className="dc-site-time">입실 13:00 - 퇴실 11:00</span>
+            <span className="dc-site-time">입실 13:00 · 퇴실 11:00</span>
           </div>
           <div className="dc-site-people">
-            <span className="dc-site-people-icon">👤</span>
-            기준 4인 / 최대 5인
+            <span className="dc-site-people-icon">👥</span>
+            기준 {basePeople}인 / 최대 {maxPeople}인
           </div>
           <div className="dc-site-manners">
             <div className="dc-site-manner-box">
@@ -189,42 +198,48 @@ function SiteDetailStep({ data, site, onReserve, onUpdateDates }) {
         )}
 
         <div className="dc-site-desc">
-          <div className="dc-site-desc-title">상품소개</div>
+          <div className="dc-site-desc-title">시설 소개</div>
           <ul className="dc-site-desc-list">
             <li>
-              22년도 수영장 오픈은 7월 20일 예정입니다. 오픈 일정은 업체 사정에
-              따라 변동될 수 있습니다.
+              22년도 리모델링 완료된 사이트입니다. 운영 일정 및 현장 상황에 따라
+              세부 사항은 변경될 수 있습니다.
             </li>
-            <li>기준 인원 4인, 최대 인원 5인</li>
-          </ul>
-          <div className="dc-site-desc-subtitle">예약방법안내</div>
-          <ul className="dc-site-desc-list">
-            <li>입실일과 퇴실일을 클릭하시면 됩니다.</li>
             <li>
-              예시) 8월 1일 ~ 8월 4일 (3박4일) → 8/1(입실), 8/4(퇴실) 클릭
+              기준 인원 {basePeople}인, 최대 인원 {maxPeople}
+              인입니다.
             </li>
           </ul>
-          <div className="dc-site-desc-subtitle">시설상태</div>
+          <div className="dc-site-desc-subtitle">예약 방법 안내</div>
           <ul className="dc-site-desc-list">
-            <li>전기, 온수, 배수 양호, 화로대 사용 가능 (전 구역 자갈 양호)</li>
+            <li>입실일과 퇴실일을 달력에서 클릭해 선택해 주세요.</li>
+            <li>예시) 8/1 ~ 8/4 (3박 4일) → 8/1(입실), 8/4(퇴실) 선택</li>
+          </ul>
+          <div className="dc-site-desc-subtitle">편의 시설</div>
+          <ul className="dc-site-desc-list">
+            <li>전기, 수도, 배수 이용 가능 (구역별 상이)</li>
             <li>
-              부대시설: 펜션 1개동, 관리동(화장실/샤워실 남·녀, 개수대), 농구대,
-              잔디마당, 야외 수영장
+              공용 시설: 펜션 1동, 관리동(화장실·샤워실·개수대), 분리수거장,
+              어린이 놀이 공간 등
             </li>
           </ul>
         </div>
 
         <div className="dc-site-desc">
-          <div className="dc-site-desc-title">알립니다</div>
+          <div className="dc-site-desc-title">유의 사항</div>
           <div className="dc-site-alert">
-            알림 내용을 읽지 않고 발생하는 불이익에 대해 책임지지 않습니다.
+            캠핑장 내에서 발생하는 개인 부주의로 인한 사고에 대해서는
+            책임지지 않습니다.
           </div>
           <ul className="dc-site-desc-list">
-            <li>기준 인원 초과 시 1인당 추가 요금이 발생할 수 있습니다.</li>
-            <li>여름 성수기 텐트촌 에어컨 사용 시 전기요금이 별도 부과됩니다.</li>
-            <li>예약 변경은 불가하며, 취소 후 재예약해야 합니다.</li>
-            <li>10:30~11:30 매너타임을 꼭 지켜주세요.</li>
-            <li>입실 13시 / 퇴실 12시를 준수해주세요.</li>
+            <li>
+              기준 인원 초과 시 1인당 추가 요금{" "}
+              {extraPerPerson.toLocaleString()}원이 발생합니다.
+            </li>
+            <li>
+              소음·음주 등으로 다른 팀에 피해를 줄 경우 퇴실 조치될 수 있습니다.
+            </li>
+            <li>예약 변경은 제한될 수 있으니, 취소 규정을 꼭 확인해 주세요.</li>
+            <li>매너타임(22:30~07:00)을 꼭 지켜 주세요.</li>
           </ul>
         </div>
 
@@ -255,32 +270,32 @@ function SiteDetailStep({ data, site, onReserve, onUpdateDates }) {
             <div className="dc-qb-sheet-header">
               <div>날짜 선택</div>
               <button type="button" onClick={closeDateSheet}>
-                ✕
+                닫기
               </button>
             </div>
             <div className="dc-qb-date-tabs">
               <div className="active">
                 {checkIn ? (
                   <>
-                    입실일{" "}
+                    입실{" "}
                     <span className="dc-qb-date-highlight">
                       {formatDateLabel(checkIn)}
                     </span>
                   </>
                 ) : (
-                  "입실일 선택"
+                  "입실 날짜 선택"
                 )}
               </div>
               <div className="active">
                 {checkOut ? (
                   <>
-                    퇴실일{" "}
+                    퇴실{" "}
                     <span className="dc-qb-date-highlight">
                       {formatDateLabel(checkOut)}
                     </span>
                   </>
                 ) : (
-                  "퇴실일 선택"
+                  "퇴실 날짜 선택"
                 )}
               </div>
             </div>

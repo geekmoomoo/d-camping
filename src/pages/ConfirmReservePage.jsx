@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { diffDays, formatDateLabel, toISO } from "../utils/date";
 import TermsModal from "../components/TermsModal";
+import { calcPrice, createReservation } from "../api/client";
 
 const OPTION_PRICE = 5000;
 const TERM_DETAILS = [
@@ -183,6 +184,65 @@ function ConfirmReservePage({ quickData, site, onProceed }) {
   const checkOut = quickData?.checkOut || "";
   const people = quickData?.people || 2;
   const initialVisitorCount = quickData?.people ? Number(quickData.people) : 0;
+  const [extraCnt, setExtraCnt] = useState(0);
+  const extraCharge = extraCnt * OPTION_PRICE;
+  const [calculatedPrice, setCalculatedPrice] = useState(site?.price || 0);
+  const [calculatedNights, setCalculatedNights] = useState(() =>
+    checkIn && checkOut ? diffDays(checkIn, checkOut) : 0
+  );
+
+  const calcFinalPrice = async () => {
+    if (!site || !checkIn || !checkOut) return null;
+    console.log("[ConfirmReservePage] calcFinalPrice", {
+      siteId: site.id,
+      checkIn,
+      checkOut,
+      people,
+      extraCharge,
+    });
+    const result = await calcPrice({ site, checkIn, checkOut, people });
+    console.log("[ConfirmReservePage] calcFinalPrice result", result);
+    if (!result) return null;
+    const total = (result.total ?? 0) + extraCharge;
+    return {
+      total,
+      nights:
+        typeof result.nights === "number"
+          ? result.nights
+          : diffDays(checkIn, checkOut),
+      detail: result,
+    };
+  };
+
+  useEffect(() => {
+    if (!site || !checkIn || !checkOut) {
+      setCalculatedPrice(site?.price || 0);
+      setCalculatedNights(checkIn && checkOut ? diffDays(checkIn, checkOut) : 0);
+      return;
+    }
+
+    let cancelled = false;
+
+    calcFinalPrice()
+      .then((result) => {
+        if (cancelled || !result) return;
+        setCalculatedPrice(result.total);
+        setCalculatedNights(result.nights);
+      })
+      .catch((error) => {
+        console.error("[ConfirmReservePage] calcFinalPrice error:", error);
+        if (!cancelled) {
+          setCalculatedPrice(site?.price || 0);
+          setCalculatedNights(
+            checkIn && checkOut ? diffDays(checkIn, checkOut) : 0
+          );
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [site, checkIn, checkOut, people, extraCnt]);
 
   const d = checkIn ? diffDays(todayISO, checkIn) : null;
   const dLabel =
@@ -192,7 +252,6 @@ function ConfirmReservePage({ quickData, site, onProceed }) {
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [request, setRequest] = useState("");
-  const [extraCnt, setExtraCnt] = useState(0);
 
   const [qa, setQa] = useState({
     q1: false,
@@ -221,6 +280,8 @@ function ConfirmReservePage({ quickData, site, onProceed }) {
   const firstQaRef = useRef(null);
   const agreeRef = useRef(null);
   const [highlightTarget, setHighlightTarget] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [reservationError, setReservationError] = useState("");
 
   const handleExtraChange = (delta) => {
     setExtraCnt((prev) => {
@@ -301,7 +362,60 @@ function ConfirmReservePage({ quickData, site, onProceed }) {
     });
   }, [qa]);
 
-  const getNextRequirement = () => {
+  const submitReservation = async () => {
+    if (isSubmitting) return;
+    const next = getNextRequirement();
+    if (next.key) {
+      focusAndHighlight(next.key);
+      return;
+    }
+    if (!site?.id) {
+      setReservationError("예약할 사이트 정보를 불러올 수 없습니다.");
+      return;
+    }
+    const extraCharge = extraCnt * OPTION_PRICE;
+    const reservationPayload = {
+      siteId: site.id,
+      checkIn,
+      checkOut,
+      people,
+      siteType: site.type,
+      price: calculatedPrice,
+      extraCharge,
+      userInfo: { name, phone, email, request },
+      qa,
+      agree: {
+        a1: agree.a1,
+        a2: agree.a2,
+        a3: agree.a3,
+        a4: agree.a4,
+        a5: agree.a5,
+      },
+    };
+    setReservationError("");
+    setIsSubmitting(true);
+    try {
+      const result = await createReservation(reservationPayload);
+      if (typeof onProceed === "function") {
+        onProceed({
+          reservationId: result.reservationId,
+          status: result.status,
+          amount: result.amount,
+          userInfo: { name, phone, email, request },
+          extraCharge,
+        });
+      }
+    } catch (error) {
+      console.error(error);
+      setReservationError(
+        error?.message || "예약 생성에 실패했습니다. 잠시 후 다시 시도해주세요."
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  function getNextRequirement() {
     if (!name.trim()) return { key: "name", message: "예약자 이름 입력" };
     if (!phone.trim()) return { key: "phone", message: "휴대폰 번호 입력" };
     if (!checkIn || !checkOut)
@@ -314,24 +428,14 @@ function ConfirmReservePage({ quickData, site, onProceed }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    const next = getNextRequirement();
-    if (next.key) {
-      focusAndHighlight(next.key);
-      return;
-    }
-    if (typeof onProceed === "function") {
-      onProceed({
-        userInfo: { name, phone, email, request },
-        extraCharge: extraCnt * OPTION_PRICE,
-      });
-    }
+    submitReservation();
   };
 
 
   const displayTitle = site?.name || "캠핑장 예약";
   const activeTerm = TERM_DETAILS.find((term) => term.key === activeTermKey);
   const nextRequirement = getNextRequirement();
-  const buttonMessage = nextRequirement.message;
+  const buttonMessage = isSubmitting ? "예약 처리 중..." : nextRequirement.message;
 
   return (
     <>
@@ -569,9 +673,23 @@ function ConfirmReservePage({ quickData, site, onProceed }) {
       </section>
 
       <div className="dc-confirm-submit-wrap">
+        {reservationError && (
+          <div className="payment-error-text" role="alert">
+            <p>{reservationError}</p>
+            <button
+              type="button"
+              className="dc-btn-outline"
+              onClick={submitReservation}
+              disabled={isSubmitting}
+            >
+              다시 시도하기
+            </button>
+          </div>
+        )}
         <button
           type="submit"
           className="dc-confirm-submit-btn"
+          disabled={isSubmitting}
         >
           {buttonMessage}
         </button>

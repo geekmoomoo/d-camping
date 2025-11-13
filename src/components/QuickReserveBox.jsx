@@ -1,3 +1,4 @@
+// src/components/QuickReserveBox.jsx
 import React, { useEffect, useState } from "react";
 import {
   addDaysISO,
@@ -20,15 +21,17 @@ function QuickReserveBox({ onNext }) {
   const [isDateSheetOpen, setIsDateSheetOpen] = useState(false);
   const [isPeopleSheetOpen, setIsPeopleSheetOpen] = useState(false);
 
+  // 기준 날짜(오늘 0시)
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
+  // 체크인 가능한 최대 날짜: 한 달 뒤
   const maxCheckInDate = new Date(today);
   maxCheckInDate.setMonth(maxCheckInDate.getMonth() + 1);
   const maxCheckInISO = toISO(maxCheckInDate);
 
   const [calYear, setCalYear] = useState(today.getFullYear());
-  const [calMonth, setCalMonth] = useState(today.getMonth());
+  const [calMonth, setCalMonth] = useState(today.getMonth()); // 0~11
 
   const selectingCheckOut = !!checkIn && !checkOut;
   const hasFullDateRange = Boolean(checkIn && checkOut);
@@ -39,9 +42,9 @@ function QuickReserveBox({ onNext }) {
   const rangeText =
     checkIn && checkOut
       ? `${formatDateLabel(checkIn)} ~ ${formatDateLabel(checkOut)}`
-      : "날짜선택";
+      : "날짜 선택";
 
-  const submitLabel = hasAnySelection ? "다음 단계로 진행" : "전체 목록 보기";
+  const submitLabel = hasAnySelection ? "다음 단계 진행" : "전체 사이트 보기";
   const showResetButton = hasAnySelection;
   const actionClasses = ["dc-qb-actions", "dc-qb-actions-full"];
   if (!showResetButton) actionClasses.push("dc-qb-actions-single");
@@ -86,22 +89,26 @@ function QuickReserveBox({ onNext }) {
     if (!iso) return;
     const todayISO = toISO(today);
 
+    // 체크인 선택 단계
     if (!selectingCheckOut) {
+      // 과거 또는 한 달 이후는 선택 불가
       if (
         compareISO(iso, todayISO) < 0 ||
         compareISO(iso, maxCheckInISO) > 0
-      )
+      ) {
         return;
+      }
       setCheckIn(iso);
       setCheckOut("");
       setError("");
       return;
     }
 
+    // 체크아웃 선택 단계
     if (compareISO(iso, checkIn) <= 0) return;
     const nights = diffDays(checkIn, iso);
     if (nights < 1 || nights > 10) {
-      setError("최대 10박까지 선택 가능합니다.");
+      setError("예약은 최대 10박까지 선택 가능합니다.");
       return;
     }
     setCheckOut(iso);
@@ -110,7 +117,7 @@ function QuickReserveBox({ onNext }) {
 
   const handleDateConfirm = () => {
     if (!checkIn || !checkOut) {
-      setError("입실/퇴실 날짜를 선택해주세요.");
+      setError("입실/퇴실 날짜를 모두 선택해 주세요.");
       return;
     }
     const nights = diffDays(checkIn, checkOut);
@@ -141,13 +148,13 @@ function QuickReserveBox({ onNext }) {
     setError("");
 
     if (people < 1) {
-      setError("인원을 1명 이상으로 입력해주세요.");
+      setError("인원은 1명 이상 입력해 주세요.");
       return;
     }
 
     const hasPartialDate = hasSelectedDate && !hasFullDateRange;
     if (hasPartialDate) {
-      setError("입실/퇴실 날짜를 모두 선택해주세요.");
+      setError("입실/퇴실 날짜를 모두 선택해 주세요.");
       return;
     }
 
@@ -186,6 +193,7 @@ function QuickReserveBox({ onNext }) {
     closeSheets();
   };
 
+  // D-day 계산
   useEffect(() => {
     const d = parseISO(checkIn);
     if (!d) {
@@ -214,6 +222,7 @@ function QuickReserveBox({ onNext }) {
     hasFullDateRange && compareISO(checkOut, checkIn) > 0
       ? diffDays(checkIn, checkOut)
       : null;
+
   const canApplyDates = stayNights !== null && stayNights >= 1;
   const dateActionLabel = canApplyDates ? (
     <>
@@ -223,19 +232,20 @@ function QuickReserveBox({ onNext }) {
       적용하기
     </>
   ) : (
-    "날짜를 선택해주세요"
+    "날짜를 선택해 주세요"
   );
 
   return (
     <>
       <form className="dc-qb dc-qb-quick" onSubmit={handleSubmit}>
         <div className="dc-qb-header dc-qb-header-green">
-        <div className="dc-qb-title">
+          <div className="dc-qb-title">
             <span className="dc-qb-title-icon">⚡</span>
             빠른 예약
           </div>
         </div>
 
+        {/* 날짜 / 인원 바 */}
         <div className="dc-qb-bar-row">
           <button
             type="button"
@@ -252,10 +262,10 @@ function QuickReserveBox({ onNext }) {
                       : "dc-qb-btn-main dc-qb-bar-placeholder"
                   }
                 >
-                  {checkIn && checkOut ? rangeText : "날짜선택"}
+                  {checkIn && checkOut ? rangeText : "날짜 선택"}
                 </span>
                 <span className="dc-qb-btn-sub">
-                  {checkIn && dDay !== null ? `D-${dDay}` : "D-day"}
+                  {checkIn && dDay !== null ? `캠핑 가는 날 D-${dDay}` : "D-day"}
                 </span>
               </div>
             </div>
@@ -267,46 +277,47 @@ function QuickReserveBox({ onNext }) {
             onClick={openPeopleSheet}
           >
             <div className="dc-qb-btn-label">
-              <span className="dc-qb-bar-icon">👤</span>
+              <span className="dc-qb-bar-icon">👥</span>
               <div className="dc-qb-btn-info">
                 <span className="dc-qb-btn-main">인원 {people}명</span>
-                {/* <span className="dc-qb-btn-sub">변경</span> */}
               </div>
             </div>
           </button>
         </div>
 
+        {/* 사이트 타입 선택 */}
         <div className="dc-qb-type-label">
-          이용 유형
-          <span className="dc-qb-type-tip">(선택 안 하면 전체 보기)</span>
+          이용 형태
+          <span className="dc-qb-type-tip">(미선택 시 전체 보기)</span>
         </div>
         <div className="dc-qb-type-grid">
           <SiteTypeButton
-            label="자가 카라반"
+            label="자가 카라반존"
             value="self-caravan"
             siteType={siteType}
             onChange={setSiteType}
           />
           <SiteTypeButton
-            label="카바나 데크"
+            label="카바나 데크존"
             value="cabana-deck"
             siteType={siteType}
             onChange={setSiteType}
           />
           <SiteTypeButton
-            label="텐트 사이트"
+            label="캠핑 사이트"
             value="tent"
             siteType={siteType}
             onChange={setSiteType}
           />
           <SiteTypeButton
-            label="팬션"
-            value="lodging"
+            label="숙박 시설"
+            value="pension"
             siteType={siteType}
             onChange={setSiteType}
           />
         </div>
 
+        {/* 액션 버튼 영역 */}
         <div className={actionClasses.join(" ")}>
           <button type="submit" className="dc-btn-primary">
             {submitLabel}
@@ -321,12 +332,15 @@ function QuickReserveBox({ onNext }) {
             </button>
           )}
         </div>
+
         {error && <div className="dc-qb-error">{error}</div>}
+
         <p className="dc-qb-helper">
-          예약은 오늘부터 한 달 이내, 최대 10박까지 선택 가능
+          예약은 오늘 기준 최대 한 달 이내, 최대 10박까지 가능합니다.
         </p>
       </form>
 
+      {/* 날짜 시트 */}
       {isDateSheetOpen && (
         <>
           <div className="dc-qb-sheet-backdrop" onClick={closeSheets} />
@@ -334,7 +348,7 @@ function QuickReserveBox({ onNext }) {
             <div className="dc-qb-sheet-header">
               <div>날짜 선택</div>
               <button type="button" onClick={closeSheets}>
-                ✕
+                닫기
               </button>
             </div>
 
@@ -342,25 +356,25 @@ function QuickReserveBox({ onNext }) {
               <div className="active">
                 {checkIn ? (
                   <>
-                    입실일{" "}
+                    입실{" "}
                     <span className="dc-qb-date-highlight">
                       {formatDateLabel(checkIn)}
                     </span>
                   </>
                 ) : (
-                  "입실일 선택"
+                  "입실 날짜 선택"
                 )}
               </div>
               <div className="active">
                 {checkOut ? (
                   <>
-                    퇴실일{" "}
+                    퇴실{" "}
                     <span className="dc-qb-date-highlight">
                       {formatDateLabel(checkOut)}
                     </span>
                   </>
                 ) : (
-                  "퇴실일 선택"
+                  "퇴실 날짜 선택"
                 )}
               </div>
             </div>
@@ -389,6 +403,7 @@ function QuickReserveBox({ onNext }) {
         </>
       )}
 
+      {/* 인원 시트 */}
       {isPeopleSheetOpen && (
         <>
           <div className="dc-qb-sheet-backdrop" onClick={closeSheets} />
@@ -396,12 +411,12 @@ function QuickReserveBox({ onNext }) {
             <div className="dc-qb-sheet-header">
               <div>인원 선택</div>
               <button type="button" onClick={closeSheets}>
-                ✕
+                닫기
               </button>
             </div>
             <div className="dc-qb-sheet-sub">
-              <span className="dc-text-orange">유아 및 아동</span>도 인원수에{" "}
-              <span className="dc-text-orange">포함</span>해주세요.
+              <span className="dc-text-orange">아이 포함</span> 전체 인원을
+              입력해 주세요.
             </div>
             <div className="dc-qb-people-row">
               <span>인원</span>
@@ -446,11 +461,11 @@ function QuickCalendarGrid({
     <>
       <div className="dc-qb-cal-header">
         <button type="button" onClick={() => onMonthChange(-1)}>
-          ‹
+          {"<"}
         </button>
         <span>{monthLabel}</span>
         <button type="button" onClick={() => onMonthChange(1)}>
-          ›
+          {">"}
         </button>
       </div>
 
@@ -469,6 +484,7 @@ function QuickCalendarGrid({
           let disabled = false;
 
           if (!selectingCheckOut) {
+            // 체크인 선택 단계
             if (
               compareISO(iso, todayISO) < 0 ||
               compareISO(iso, maxCheckInISO) > 0
@@ -476,6 +492,7 @@ function QuickCalendarGrid({
               disabled = true;
             }
           } else {
+            // 체크아웃 선택 단계
             if (!checkIn) {
               disabled = true;
             } else {

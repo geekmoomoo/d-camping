@@ -5,8 +5,7 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { sites } from "../config/sitesConfig";
-import { mockSites } from "../data/mockSites";
+import { sites as siteConfigs } from "../config/sitesConfig";
 
 const TYPE_OPTIONS = [
   { label: "자가 카라반", value: "caravan" },
@@ -28,7 +27,7 @@ const MIN_ZOOM = 1;
 const MAX_ZOOM = 3.5;
 const ZOOM_STEP = 0.25;
 
-function MapSelector({ onNext }) {
+function MapSelector({ sites = [], onNext }) {
   const [selectedType, setSelectedType] = useState(null);
   const [selectedSite, setSelectedSite] = useState(null);
   const [scale, setScale] = useState(1);
@@ -44,23 +43,38 @@ function MapSelector({ onNext }) {
     origin: { x: 0, y: 0 },
   });
 
-  const filteredSites = useMemo(() => {
-    if (!selectedType) return [];
-    return sites.filter((site) => site.type === selectedType);
-  }, [selectedType]);
-
   const siteDetailsMap = useMemo(() => {
     const map = new Map();
-    mockSites.forEach((detail) => map.set(detail.id, detail));
+    sites.forEach((detail) => map.set(detail.id, detail));
     return map;
-  }, []);
+  }, [sites]);
+
+  const combinedSites = useMemo(() => {
+    return siteConfigs.map((coord) => {
+      const detail = siteDetailsMap.get(coord.id);
+      const merged = {
+        ...coord,
+        ...(detail || {}),
+      };
+      merged.mapType = coord.type;
+      merged.type = detail?.type || coord.type;
+      merged.name = detail?.name || coord.id;
+      merged.zone = detail?.zone || coord.id;
+      merged.carOption = detail?.carOption || "";
+      merged.squareImg = detail?.squareImg;
+      merged.price = typeof detail?.price === "number" ? detail.price : 0;
+      merged.remain = detail?.remain ?? detail?.stockTotal ?? 0;
+      return merged;
+    });
+  }, [siteDetailsMap]);
+
+  const filteredSites = useMemo(() => {
+    if (!selectedType) return [];
+    return combinedSites.filter((site) => site.mapType === selectedType);
+  }, [selectedType, combinedSites]);
 
   const handleSelectSite = (site) => {
-    const detail = siteDetailsMap.get(site.id);
-    const nextSite = detail
-      ? { ...detail, x: site.x, y: site.y }
-      : { ...site, name: site.id, zone: site.id, carOption: "" };
-    setSelectedSite(nextSite);
+    setSelectedSite(site);
   };
 
   const handleSubmit = () => {
@@ -255,7 +269,7 @@ function MapSelector({ onNext }) {
             {filteredSites.map((site) => {
               const isActive = selectedSite?.id === site.id;
               const label =
-                site.type === "caravan" || site.type === "cabana"
+                site.mapType === "caravan" || site.mapType === "cabana"
                   ? site.id.replace(/\D+/g, "")
                   : site.id;
               return (
