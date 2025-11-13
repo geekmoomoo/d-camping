@@ -18,10 +18,10 @@ const TYPE_OPTIONS = [
 
 
 const TYPE_FOCUS = {
-  caravan: { scale: 3, center: { x: 49.5, y: 93.5 } },
-  cabana: { scale: 3, center: { x: 50, y: 83 } },
+  caravan: { scale: 2.5, center: { x: 49.5, y: 93.5 } },
+  cabana: { scale: 2.5, center: { x: 50, y: 83 } },
   camp: { scale: 1.5, center: { x: 50, y: 50 } },
-  room: { scale: 3, center: { x: 53, y: 17 } },
+  room: { scale: 2, center: { x: 53, y: 17 } },
 };
 
 const MIN_ZOOM = 1;
@@ -29,7 +29,7 @@ const MAX_ZOOM = 3.5;
 const ZOOM_STEP = 0.25;
 
 function MapSelector({ onNext }) {
-  const [selectedType, setSelectedType] = useState(TYPE_OPTIONS[0].value);
+  const [selectedType, setSelectedType] = useState(null);
   const [selectedSite, setSelectedSite] = useState(null);
   const [scale, setScale] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
@@ -131,8 +131,8 @@ function MapSelector({ onNext }) {
     setSelectedSite(null);
     setSelectedType(null);
     setScale(1);
-    setOffset(clampOffset(1, { x: 0, y: 0 }));
-  }, [clampOffset]);
+    setOffset(getCenteredOffset(1));
+  }, [getCenteredOffset]);
 
   const changeZoom = (delta) => {
     setScale((prev) => {
@@ -192,6 +192,8 @@ function MapSelector({ onNext }) {
     }
   };
 
+  const isOverviewActive = !selectedType;
+
   return (
     <section className="map-selector">
       <div className="dc-qb-header dc-qb-header-blue">
@@ -226,7 +228,10 @@ function MapSelector({ onNext }) {
       <div className="map-selector-canvas" ref={frameRef}>
         <button
           type="button"
-          className="map-selector-overview"
+          className={
+            "map-selector-overview" +
+            (isOverviewActive ? " active" : "")
+          }
           onClick={handleOverview}
         >
           전체보기

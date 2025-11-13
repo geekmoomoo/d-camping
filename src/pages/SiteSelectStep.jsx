@@ -207,9 +207,16 @@ function SiteSelectStep({ data, onChangeFilter, onSelectSite }) {
               <div className="dc-site-meta-row">
                 <div className="dc-site-left" />
                 <div className="dc-site-right">
-                  <div className="dc-site-remain">남은 자리 {site.remain}개</div>
-                  <div className="dc-site-price">
-                    {site.price.toLocaleString()}원~
+                  <div className="dc-site-meta-info">
+                    <span className="dc-site-remain">
+                      남은 자리 {site.remain}개
+                    </span>
+                    <span className="dc-site-divider" aria-hidden="true">
+                      |
+                    </span>
+                    <span className="dc-site-price">
+                      {site.price.toLocaleString()}원~
+                    </span>
                   </div>
                   <button
                     type="button"

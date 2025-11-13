@@ -123,6 +123,8 @@ function SiteDetailStep({ data, site, onReserve, onUpdateDates }) {
   const hasFullDateRange =
     checkIn && checkOut && compareISO(checkOut, checkIn) > 0;
   const stayNights = hasFullDateRange ? diffDays(checkIn, checkOut) : null;
+  const stayLengthText =
+    stayNights !== null ? `${stayNights}박${stayNights + 1}일` : "0박0일";
   const canApplyDates = stayNights !== null && stayNights >= 1;
   const dateActionLabel = canApplyDates ? (
     <>
@@ -232,7 +234,10 @@ function SiteDetailStep({ data, site, onReserve, onUpdateDates }) {
       <div className="dc-fixed-reserve-bar">
         <button type="button" className="dc-fixed-date" onClick={openDateSheet}>
           <span className="dc-fixed-date-icon">📅</span>
-          <span className="dc-fixed-date-text">{rangeText}</span>
+          <span className="dc-fixed-date-text">
+            <span>{rangeText}</span>
+            <span className="dc-fixed-date-length">{stayLengthText}</span>
+          </span>
         </button>
         <button
           type="button"

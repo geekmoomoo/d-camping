@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import "./index.css";
 import Footer from "./components/Footer";
 import Header from "./components/Header";
@@ -7,12 +8,21 @@ import ConfirmReservePage from "./pages/ConfirmReservePage";
 import HomePage from "./pages/HomePage";
 import SiteDetailStep from "./pages/SiteDetailStep";
 import SiteSelectStep from "./pages/SiteSelectStep";
+import PaymentConfirmPage from "./pages/PaymentConfirmPage";
+import PaymentSuccessPage from "./pages/PaymentSuccessPage";
+import PaymentFailPage from "./pages/PaymentFailPage";
 
 
 function App() {
   const [step, setStep] = useState("home");
   const [quickData, setQuickData] = useState(null);
   const [selectedSite, setSelectedSite] = useState(null);
+  const [paymentPayload, setPaymentPayload] = useState({
+    userInfo: null,
+    extraCharge: 0,
+  });
+  const location = useLocation();
+  const navigate = useNavigate();
 
   const goHome = () => { setStep("home"); setSelectedSite(null); };
   const handleQuickNext = (payload) => { setQuickData(payload); setSelectedSite(null); setStep("select-site"); };
@@ -23,6 +33,10 @@ function App() {
     setStep("site-detail");
   };
   const handleGoConfirm = () => setStep("confirm");
+  const handleGoPayment = (payload) => {
+    setPaymentPayload(payload || { userInfo: null, extraCharge: 0 });
+    setStep("payment");
+  };
   const handleUpdateDatesFromDetail = (partial) => { setQuickData((prev) => ({ ...(prev || {}), ...partial })); };
 
   const headerTitle = getHeaderTitle(step, quickData, selectedSite);
@@ -31,6 +45,7 @@ function App() {
     if (step === "select-site") { setStep("home"); setSelectedSite(null); }
     else if (step === "site-detail") { setStep("select-site"); setSelectedSite(null); }
     else if (step === "confirm") { setStep("site-detail"); }
+    else if (step === "payment") { setStep("confirm"); }
     else { goHome(); }
   };
 
@@ -38,8 +53,46 @@ function App() {
     window.scrollTo({ top: 0, left: 0 });
   }, [step]);
 
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0 });
+  }, []);
+
   const isHome = step === "home";
   const pageClassName = `dc-page ${isHome ? "dc-page--home" : "dc-page--step"}`;
+
+  if (location.pathname === "/payment/success") {
+    const goOutcomeHome = () => {
+      setStep("home");
+      setSelectedSite(null);
+      navigate("/", { replace: true });
+    };
+    return (
+      <div className="dc-page dc-page--step">
+        <StepHeader title="결제 성공" onBack={goOutcomeHome} onHome={goOutcomeHome} />
+        <main className="dc-step-main">
+          <PaymentSuccessPage onReservationBack={goOutcomeHome} onHome={goOutcomeHome} />
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (location.pathname === "/payment/fail") {
+    const goOutcomeHome = () => {
+      setStep("home");
+      setSelectedSite(null);
+      navigate("/", { replace: true });
+    };
+    return (
+      <div className="dc-page dc-page--step">
+        <StepHeader title="결제 실패" onBack={goOutcomeHome} onHome={goOutcomeHome} />
+        <main className="dc-step-main">
+          <PaymentFailPage onRetry={goOutcomeHome} onHome={goOutcomeHome} />
+        </main>
+        <Footer />
+      </div>
+    );
+  }
 
   return (
     <div className={pageClassName}>
@@ -68,7 +121,20 @@ function App() {
               />
             )}
             {step === "confirm" && (
-              <ConfirmReservePage quickData={quickData} site={selectedSite} />
+              <ConfirmReservePage
+                quickData={quickData}
+                site={selectedSite}
+                onProceed={handleGoPayment}
+              />
+            )}
+            {step === "payment" && (
+              <PaymentConfirmPage
+                quickData={quickData}
+                site={selectedSite}
+                userInfo={paymentPayload.userInfo}
+                extraCharge={paymentPayload.extraCharge}
+                onEditReservation={() => setStep("confirm")}
+              />
             )}
           </main>
         </>
@@ -80,7 +146,7 @@ function App() {
 
 function getTypeLabel(quickData) {
   const t = quickData?.siteType;
-  if (t === "self-caravan") return "자가 카라반";
+  if (t === "self-caravan") return "자가 카라반존";
   if (t === "cabana-deck") return "카바나 데크";
   if (t === "tent") return "텐트 사이트";
   if (t === "lodging") return "숙박 시설";
@@ -92,7 +158,8 @@ function getHeaderTitle(step, quickData, selectedSite) {
   if (step === "select-site") return `${typeLabel} 사이트 선택`;
   if (step === "site-detail") return "예약 상세보기";
   if (step === "confirm") return "예약하기";
-  return "예약 단계";
+  if (step === "payment") return "결제확인";
+  return "예약 계획";
 }
 
 export default App;

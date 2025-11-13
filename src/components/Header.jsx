@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useCallback, useState } from "react";
 
 const navLinks = [
   { href: "#reserve-check", label: "예약확인" },
@@ -10,13 +10,31 @@ const navLinks = [
 function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const closeMenu = () => setIsMenuOpen(false);
+  const scrollToTop = useCallback(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, []);
+  const handleLogoKeyDown = (event) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      scrollToTop();
+    }
+  };
 
   return (
     <header className="dc-header">
       <div className="dc-header-inner">
         <div className="dc-header-left">
           <div className="dc-logo-group">
-            <div className="dc-logo">담양 금성산성 오토캠핑장</div>
+            <div
+              className="dc-logo"
+              role="button"
+              tabIndex={0}
+              aria-label="상단으로 이동"
+              onClick={scrollToTop}
+              onKeyDown={handleLogoKeyDown}
+            >
+              담양 금성산성 오토캠핑장
+            </div>
             <div className="dc-logo-sub">Damyang Auto Camping</div>
           </div>
         </div>
