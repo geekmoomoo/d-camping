@@ -3,6 +3,73 @@ const express = require('express');
 const cors = require('cors');
 const { db } = require('./firebase');
 
+// ---------------- 요금 계산 상수/헬퍼 ----------------
+
+function isWeekendInOffSeason(day) {
+  // 비수기: 금, 토만 주말
+  return day === 5 || day === 6;
+}
+
+function isWeekendInPeakSeason(day) {
+  // 성수기: 금, 토 (공휴일 전날 등은 나중에 확장)
+  return day === 5 || day === 6;
+}
+
+async function isPeakDate(dateStr) {
+  const snap = await db.collection('peakDates').doc(dateStr).get();
+  if (!snap.exists) return false;
+  const data = snap.data() || {};
+  return !!data.isPeak;
+}
+
+function enumerateNights(checkIn, checkOut) {
+  const nights = [];
+  let cur = new Date(checkIn + 'T00:00:00+09:00');
+  const end = new Date(checkOut + 'T00:00:00+09:00');
+
+  while (cur < end) {
+    const y = cur.getFullYear();
+    const m = String(cur.getMonth() + 1).padStart(2, '0');
+    const d = String(cur.getDate()).padStart(2, '0');
+    nights.push(`${y}-${m}-${d}`);
+    cur.setDate(cur.getDate() + 1);
+  }
+  return nights;
+}
+
+async function getNightPriceForDate(site, dateStr) {
+  const date = new Date(dateStr + 'T00:00:00+09:00');
+  const day = date.getDay();
+  const isPeak = await isPeakDate(dateStr);
+  const isSunday = day === 0;
+
+  if (isPeak) {
+    if (!isSunday && isWeekendInPeakSeason(day)) {
+      return Number(site.pricePeakWeekend || 0);
+    }
+    return Number(site.pricePeakWeekday || 0);
+  }
+
+  if (!isSunday && isWeekendInOffSeason(day)) {
+    return Number(site.priceOffWeekend || 0);
+  }
+  return Number(site.priceOffWeekday || 0);
+}
+
+async function calculateTotalAmountForStay(site, checkIn, checkOut) {
+  const nights = enumerateNights(checkIn, checkOut);
+  let total = 0;
+  const breakdown = [];
+
+  for (const dateStr of nights) {
+    const price = await getNightPriceForDate(site, dateStr);
+    breakdown.push({ date: dateStr, price });
+    total += price;
+  }
+
+  return { totalAmount: total, breakdown };
+}
+
 const app = express();
 const PORT = process.env.PORT || 4000;
 
@@ -65,18 +132,6 @@ function findReservationsByPhone(phone) {
   });
 }
 
-const loadPeakDates = async () => {
-  const snapshot = await db.collection("peakDates").get();
-  const peakDates = new Set();
-  snapshot.forEach((doc) => {
-    const data = doc.data() || {};
-    if (data.isPeak) {
-      peakDates.add(data.date);
-    }
-  });
-  return peakDates;
-};
-
 app.get('/api/health', (req, res) => {
   res.json({ ok: true, time: new Date().toISOString() });
 });
@@ -128,7 +183,7 @@ app.get('/api/sites', async (req, res) => {
   }
 });
 
-app.post('/api/reservations', (req, res) => {
+app.post('/api/reservations', async (req, res) => {
   console.log('=== [/api/reservations] CREATE REQUEST START ===');
   console.log('body:', req.body);
 
@@ -146,22 +201,12 @@ app.post('/api/reservations', (req, res) => {
     customerName,
     customerPhone,
     customerEmail,
-    totalAmount,
     memo,
   } = req.body || {};
 
   const finalName = customerName || (userInfo && userInfo.name) || '';
   const finalPhone = customerPhone || (userInfo && userInfo.phone) || '';
   const finalEmail = customerEmail || (userInfo && userInfo.email) || '';
-
-  let amountNumber;
-  if (typeof totalAmount !== 'undefined' && totalAmount !== null) {
-    amountNumber = Number(totalAmount);
-  } else if (typeof price !== 'undefined' || typeof extraCharge !== 'undefined') {
-    amountNumber = Number(price || 0) + Number(extraCharge || 0);
-  } else {
-    amountNumber = 0;
-  }
 
   if (!checkIn || !checkOut || !siteId || !people || !finalName || !finalPhone) {
     console.error('[/api/reservations] missing required fields', {
@@ -179,21 +224,59 @@ app.post('/api/reservations', (req, res) => {
     });
   }
 
+  let siteData = null;
+  try {
+    const snap = await db.collection('sites').doc(siteId).get();
+    if (!snap.exists) {
+      console.warn('[/api/reservations] site not found:', siteId);
+      return res.status(400).json({
+        code: 'SITE_NOT_FOUND',
+        message: '해당 사이트 정보를 찾을 수 없습니다.',
+      });
+    }
+    siteData = snap.data() || {};
+  } catch (err) {
+    console.error('[/api/reservations] site fetch error:', err);
+    return res.status(500).json({
+      code: 'SITE_FETCH_ERROR',
+      message: '사이트 정보를 불러오는 중 오류가 발생했습니다.',
+    });
+  }
+
+  let totalAmount = 0;
+  let priceBreakdown = [];
+  try {
+    const result = await calculateTotalAmountForStay(siteData, checkIn, checkOut);
+    totalAmount = result.totalAmount;
+    priceBreakdown = result.breakdown;
+  } catch (err) {
+    console.error('[/api/reservations] price calc error:', err);
+    return res.status(500).json({
+      code: 'PRICE_CALC_ERROR',
+      message: '요금 계산 중 오류가 발생했습니다.',
+    });
+  }
+
+  const priceBase = typeof price !== 'undefined' ? Number(price) : null;
+  const extraChargeAmount = typeof extraCharge !== 'undefined' ? Number(extraCharge) : 0;
+  const finalTotalAmount = totalAmount + extraChargeAmount;
+
   const reservation = createReservation({
     checkIn,
     checkOut,
     siteId,
     people,
     siteType: siteType || null,
-    price: typeof price !== 'undefined' ? Number(price) : null,
-    extraCharge: typeof extraCharge !== 'undefined' ? Number(extraCharge) : 0,
+    price: priceBase,
+    extraCharge: extraChargeAmount,
     userInfo: userInfo || null,
     qa: qa || null,
     agree: agree || null,
     customerName: finalName,
     customerPhone: finalPhone,
     customerEmail: finalEmail || null,
-    totalAmount: isNaN(amountNumber) ? 0 : amountNumber,
+    totalAmount: finalTotalAmount,
+    priceBreakdown,
     memo: memo || '',
   });
 
@@ -351,57 +434,37 @@ app.post('/api/price/calc', async (req, res) => {
   const { site, checkIn, checkOut, people } = req.body || {};
 
   if (!site || !checkIn || !checkOut || typeof people === 'undefined') {
-    return res.status(400).json({ message: '필수 값 누락' });
+    return res.status(400).json({ message: 'Missing reservation data.' });
   }
 
-  const start = new Date(checkIn);
-  const end = new Date(checkOut);
-  const nights = Math.max(
-    1,
-    Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24))
-  );
+  try {
+    const { totalAmount, breakdown } = await calculateTotalAmountForStay(
+      site,
+      checkIn,
+      checkOut
+    );
+    const nights = Math.max(1, breakdown.length);
+    const adjustedBasePeople = Number(site.basePeople || 0);
+    const extraPerPerson = Number(site.extraPerPerson || 0);
+    const requestedPeople = Number(people || 0);
+    const extraPeople = Math.max(0, requestedPeople - adjustedBasePeople);
+    const extraFee = extraPeople * extraPerPerson * nights;
+    const total = totalAmount + extraFee;
 
-  const peakDates = await loadPeakDates();
-
-  const isPeak = (dateStr) => peakDates.has(dateStr);
-  const isWeekend = (date) => {
-    const day = date.getDay();
-    return day === 0 || day === 6;
-  };
-
-  let totalBase = 0;
-  for (let i = 0; i < nights; i++) {
-    const current = new Date(start);
-    current.setDate(start.getDate() + i);
-    const dateStr = current.toISOString().slice(0, 10);
-    const peak = isPeak(dateStr);
-    const weekend = isWeekend(current);
-    const peakWeekday = Number(site.pricePeakWeekday || 0);
-    const peakWeekend = Number(site.pricePeakWeekend || 0);
-    const offWeekday = Number(site.priceOffWeekday || 0);
-    const offWeekend = Number(site.priceOffWeekend || 0);
-
-    let daily = 0;
-    if (peak) {
-      daily = weekend ? peakWeekend : peakWeekday;
-    } else {
-      daily = weekend ? offWeekend : offWeekday;
-    }
-    totalBase += daily;
+    return res.json({
+      nights,
+      totalBase: totalAmount,
+      extraFee,
+      total,
+      breakdown,
+    });
+  } catch (err) {
+    console.error('[/api/price/calc] failed to calculate price', err);
+    return res.status(500).json({
+      code: 'PRICE_CALC_ERROR',
+      message: 'Failed to calculate price.',
+    });
   }
-
-  const adjustedBasePeople = Number(site.basePeople || 0);
-  const extraPerPerson = Number(site.extraPerPerson || 0);
-  const extraPeople = Math.max(0, people - adjustedBasePeople);
-  const extraFee = extraPeople * extraPerPerson * nights;
-  const total = totalBase + extraFee;
-
-  return res.json({
-    nights,
-    totalBase,
-    extraFee,
-    total,
-  });
 });
 
 app.listen(PORT, () => {

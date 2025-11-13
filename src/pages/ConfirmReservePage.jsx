@@ -395,12 +395,19 @@ function ConfirmReservePage({ quickData, site, onProceed }) {
     setReservationError("");
     setIsSubmitting(true);
     try {
-      const result = await createReservation(reservationPayload);
+      const reservation = await createReservation(reservationPayload);
+      const reservationId = reservation.reservationId || reservation.id || null;
+      const serverTotalAmount =
+        reservation.totalAmount ??
+        reservation.amount ??
+        calculatedPrice ??
+        0;
+
       if (typeof onProceed === "function") {
         onProceed({
-          reservationId: result.reservationId,
-          status: result.status,
-          amount: result.amount,
+          reservationId,
+          status: reservation.status,
+          amount: serverTotalAmount,
           userInfo: { name, phone, email, request },
           extraCharge,
         });
