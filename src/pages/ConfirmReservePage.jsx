@@ -323,6 +323,8 @@ function ConfirmReservePage({ quickData, site, onProceed }) {
       onProceed({
         userInfo: { name, phone, email, request },
         extraCharge: extraCnt * OPTION_PRICE,
+        qa,
+        agree,
       });
     }
   };

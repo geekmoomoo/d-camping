@@ -6,7 +6,7 @@ import React, {
   useState,
 } from "react";
 import { sites } from "../config/sitesConfig";
-import { mockSites } from "../data/mockSites";
+import { getSites } from "../services/siteService";
 
 const TYPE_OPTIONS = [
   { label: "자가 카라반", value: "caravan" },
@@ -31,6 +31,7 @@ const ZOOM_STEP = 0.25;
 function MapSelector({ onNext }) {
   const [selectedType, setSelectedType] = useState(null);
   const [selectedSite, setSelectedSite] = useState(null);
+  const [siteDetails, setSiteDetails] = useState([]);
   const [scale, setScale] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
@@ -51,9 +52,9 @@ function MapSelector({ onNext }) {
 
   const siteDetailsMap = useMemo(() => {
     const map = new Map();
-    mockSites.forEach((detail) => map.set(detail.id, detail));
+    siteDetails.forEach((detail) => map.set(detail.id, detail));
     return map;
-  }, []);
+  }, [siteDetails]);
 
   const handleSelectSite = (site) => {
     const detail = siteDetailsMap.get(site.id);
@@ -126,6 +127,18 @@ function MapSelector({ onNext }) {
       focusOnType(selectedType);
     }
   }, [selectedType, focusOnType]);
+
+  useEffect(() => {
+    let active = true;
+    getSites().then((items) => {
+      if (active) {
+        setSiteDetails(items);
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const handleOverview = useCallback(() => {
     setSelectedSite(null);

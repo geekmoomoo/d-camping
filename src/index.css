@@ -440,18 +440,6 @@ p {
   background: rgba(0, 0, 0, 0.35);
 }
 
-.dc-hero-page-indicator-fixed {
-  position: absolute;
-  right: 20px;
-  bottom: 20px;
-  border-radius: 999px;
-  padding: 6px 14px;
-  font-size: 0.85rem;
-  background: rgba(2, 6, 23, 0.7);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(148, 163, 184, 0.3);
-}
-
 .dc-hero-dots {
   position: absolute;
   left: 50%;
@@ -459,6 +447,7 @@ p {
   transform: translateX(-50%);
   display: flex;
   gap: 6px;
+  z-index: 5;
 }
 
 .dc-hero-dot {

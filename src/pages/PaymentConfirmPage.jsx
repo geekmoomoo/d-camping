@@ -1,11 +1,15 @@
 import React, { useMemo, useState } from "react";
 import { diffDays, formatDateLabel, toISO } from "../utils/date";
 
+const PENDING_KEY = "dcamp.pendingReservation";
+
 function PaymentConfirmPage({
   quickData,
   site,
   userInfo = {},
   extraCharge = 0,
+  qa = {},
+  agree = {},
   onEditReservation,
 }) {
   const [isLoading, setIsLoading] = useState(false);
@@ -31,8 +35,27 @@ function PaymentConfirmPage({
     [extraCharge]
   );
 
+  const persistPending = () => {
+    try {
+      sessionStorage.setItem(
+        PENDING_KEY,
+        JSON.stringify({
+          quickData,
+          selectedSite: site,
+          userInfo,
+          extraCharge,
+          qa,
+          agree,
+        })
+      );
+    } catch (err) {
+      console.error("sessionStorage error", err);
+    }
+  };
+
   const handlePayment = async () => {
     try {
+      persistPending();
       setIsLoading(true);
       setErrorMessage("");
       const response = await fetch("/api/payments/ready", {

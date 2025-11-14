@@ -11,6 +11,10 @@ import SiteSelectStep from "./pages/SiteSelectStep";
 import PaymentConfirmPage from "./pages/PaymentConfirmPage";
 import PaymentSuccessPage from "./pages/PaymentSuccessPage";
 import PaymentFailPage from "./pages/PaymentFailPage";
+import ReservationLookupPage from "./pages/ReservationLookupPage";
+import CancelRequestPage from "./pages/CancelRequestPage";
+import CustomerInquiryPage from "./pages/CustomerInquiryPage";
+import UsageGuidePage from "./pages/UsageGuidePage";
 
 
 function App() {
@@ -20,21 +24,51 @@ function App() {
   const [paymentPayload, setPaymentPayload] = useState({
     userInfo: null,
     extraCharge: 0,
+    qa: {},
+    agree: {},
   });
+  const [activePage, setActivePage] = useState("main");
   const location = useLocation();
   const navigate = useNavigate();
 
-  const goHome = () => { setStep("home"); setSelectedSite(null); };
-  const handleQuickNext = (payload) => { setQuickData(payload); setSelectedSite(null); setStep("select-site"); };
-  const handleSiteSelect = (site) => { setSelectedSite(site); setStep("site-detail"); };
+  const menuItems = [
+    { id: "lookup", label: "예약확인" },
+    { id: "cancel", label: "취소/환불 요청" },
+    { id: "inquiry", label: "고객문의" },
+    { id: "guide", label: "이용안내" },
+  ];
+
+  const goHome = () => {
+    setStep("home");
+    setQuickData(null);
+    setSelectedSite(null);
+    setActivePage("main");
+  };
+  const handleQuickNext = (payload) => {
+    setActivePage("main");
+    setQuickData(payload);
+    setSelectedSite(null);
+    setStep("select-site");
+  };
+  const handleSiteSelect = (site) => {
+    setActivePage("main");
+    setSelectedSite(site);
+    setStep("site-detail");
+  };
   const handleMapNext = (site) => {
+    setActivePage("main");
     setQuickData(null);
     setSelectedSite(site);
     setStep("site-detail");
   };
   const handleGoConfirm = () => setStep("confirm");
   const handleGoPayment = (payload) => {
-    setPaymentPayload(payload || { userInfo: null, extraCharge: 0 });
+    setPaymentPayload({
+      userInfo: payload?.userInfo || null,
+      extraCharge: payload?.extraCharge || 0,
+      qa: payload?.qa || {},
+      agree: payload?.agree || {},
+    });
     setStep("payment");
   };
   const handleUpdateDatesFromDetail = (partial) => { setQuickData((prev) => ({ ...(prev || {}), ...partial })); };
@@ -58,7 +92,58 @@ function App() {
   }, []);
 
   const isHome = step === "home";
-  const pageClassName = `dc-page ${isHome ? "dc-page--home" : "dc-page--step"}`;
+  const isMainView = activePage === "main";
+  const pageClassName = `dc-page ${
+    isMainView && isHome ? "dc-page--home" : "dc-page--step"
+  }`;
+
+  const renderMenuBar = () => (
+    <div
+      className="dc-page-menu"
+      style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+        gap: 8,
+        padding: "8px 16px",
+      }}
+    >
+      {menuItems.map((item) => (
+        <button
+          key={item.id}
+          type="button"
+          className={
+            "dc-page-menu-btn" + (activePage === item.id ? " active" : "")
+          }
+          style={{
+            padding: "12px 0",
+            fontSize: 14,
+            borderRadius: 6,
+            border: "1px solid #dae3ef",
+            background: activePage === item.id ? "#1d4ed8" : "#ffffff",
+            color: activePage === item.id ? "#fff" : "#1b1b1b",
+          }}
+          onClick={() => setActivePage(item.id)}
+        >
+          {item.label}
+        </button>
+      ))}
+    </div>
+  );
+
+  const pageTitleMap = {
+    lookup: "예약확인",
+    cancel: "취소/환불 요청",
+    inquiry: "고객문의",
+    guide: "이용안내",
+  };
+
+  const renderExtraPage = () => {
+    if (activePage === "lookup") return <ReservationLookupPage />;
+    if (activePage === "cancel") return <CancelRequestPage />;
+    if (activePage === "inquiry") return <CustomerInquiryPage />;
+    if (activePage === "guide") return <UsageGuidePage />;
+    return null;
+  };
 
   if (location.pathname === "/payment/success") {
     const goOutcomeHome = () => {
@@ -68,6 +153,7 @@ function App() {
     };
     return (
       <div className="dc-page dc-page--step">
+        {renderMenuBar()}
         <StepHeader title="결제 성공" onBack={goOutcomeHome} onHome={goOutcomeHome} />
         <main className="dc-step-main">
           <PaymentSuccessPage onReservationBack={goOutcomeHome} onHome={goOutcomeHome} />
@@ -85,6 +171,7 @@ function App() {
     };
     return (
       <div className="dc-page dc-page--step">
+        {renderMenuBar()}
         <StepHeader title="결제 실패" onBack={goOutcomeHome} onHome={goOutcomeHome} />
         <main className="dc-step-main">
           <PaymentFailPage onRetry={goOutcomeHome} onHome={goOutcomeHome} />
@@ -96,47 +183,59 @@ function App() {
 
   return (
     <div className={pageClassName}>
-      {isHome && <Header />}
-      {isHome ? (
-        <main className="dc-home-main">
-          <HomePage onQuickNext={handleQuickNext} onMapNext={handleMapNext} />
-        </main>
-      ) : (
+      {renderMenuBar()}
+      {isMainView ? (
         <>
-          <StepHeader title={headerTitle} onBack={handleBack} onHome={goHome} />
-          <main className="dc-step-main">
-            {step === "select-site" && (
-              <SiteSelectStep
-                data={quickData}
-                onChangeFilter={setQuickData}
-                onSelectSite={handleSiteSelect}
-              />
-            )}
-            {step === "site-detail" && (
-              <SiteDetailStep
-                data={quickData}
-                site={selectedSite}
-                onReserve={handleGoConfirm}
-                onUpdateDates={handleUpdateDatesFromDetail}
-              />
-            )}
-            {step === "confirm" && (
-              <ConfirmReservePage
-                quickData={quickData}
-                site={selectedSite}
-                onProceed={handleGoPayment}
-              />
-            )}
+          {isHome && <Header />}
+          {isHome ? (
+            <main className="dc-home-main">
+              <HomePage onQuickNext={handleQuickNext} onMapNext={handleMapNext} />
+            </main>
+          ) : (
+            <>
+              <StepHeader title={headerTitle} onBack={handleBack} onHome={goHome} />
+              <main className="dc-step-main">
+                {step === "select-site" && (
+                  <SiteSelectStep
+                    data={quickData}
+                    onChangeFilter={setQuickData}
+                    onSelectSite={handleSiteSelect}
+                  />
+                )}
+                {step === "site-detail" && (
+                  <SiteDetailStep
+                    data={quickData}
+                    site={selectedSite}
+                    onReserve={handleGoConfirm}
+                    onUpdateDates={handleUpdateDatesFromDetail}
+                  />
+                )}
+                {step === "confirm" && (
+                  <ConfirmReservePage
+                    quickData={quickData}
+                    site={selectedSite}
+                    onProceed={handleGoPayment}
+                  />
+                )}
             {step === "payment" && (
               <PaymentConfirmPage
                 quickData={quickData}
                 site={selectedSite}
                 userInfo={paymentPayload.userInfo}
                 extraCharge={paymentPayload.extraCharge}
+                qa={paymentPayload.qa}
+                agree={paymentPayload.agree}
                 onEditReservation={() => setStep("confirm")}
               />
             )}
-          </main>
+              </main>
+            </>
+          )}
+        </>
+      ) : (
+        <>
+          <StepHeader title={pageTitleMap[activePage]} onBack={goHome} onHome={goHome} />
+          <main className="dc-step-main">{renderExtraPage()}</main>
         </>
       )}
       <Footer />

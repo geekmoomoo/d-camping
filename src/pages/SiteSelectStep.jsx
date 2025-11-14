@@ -7,8 +7,7 @@ import {
   parseISO,
   toISO,
 } from "../utils/date";
-
-import { mockSites } from "../data/mockSites";
+import { getSites } from "../services/siteService";
 
 
 function SiteSelectStep({ data, onChangeFilter, onSelectSite }) {
@@ -124,7 +123,21 @@ function SiteSelectStep({ data, onChangeFilter, onSelectSite }) {
     closeSheets();
   };
 
-  const monthLabel = `${calYear}년 ${calMonth + 1}월`; 
+  const [siteList, setSiteList] = useState([]);
+
+  useEffect(() => {
+    let active = true;
+    getSites().then((items) => {
+      if (active) {
+        setSiteList(items);
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const monthLabel = `${calYear}년 ${calMonth + 1}월`;
   const firstDay = new Date(calYear, calMonth, 1);
   const firstWeekday = firstDay.getDay();
   const totalDays = daysInMonth(calYear, calMonth);
@@ -154,10 +167,10 @@ function SiteSelectStep({ data, onChangeFilter, onSelectSite }) {
 
   const filteredSites = useMemo(() => {
     if (data?.siteType && data.siteType !== "all") {
-      return mockSites.filter((s) => s.type === data.siteType);
+      return siteList.filter((s) => s.type === data.siteType);
     }
-    return mockSites;
-  }, [data?.siteType]);
+    return siteList;
+  }, [siteList, data?.siteType]);
 
   return (
     <section className="dc-step-card dc-site-select-card">

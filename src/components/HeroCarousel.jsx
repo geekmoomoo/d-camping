@@ -209,9 +209,6 @@ function HeroCarousel({ images = defaultImages }) {
           );
         })}
       </div>
-      <div className="dc-hero-page-indicator-fixed">
-        {displayIndex} / {total}
-      </div>
       <div className="dc-hero-dots">
         {images.map((_, i) => (
           <button
