@@ -44,6 +44,12 @@ function MapSelector({ onNext }) {
     start: { x: 0, y: 0 },
     origin: { x: 0, y: 0 },
   });
+  const pointersRef = useRef(new Map());
+  const pinchRef = useRef({
+    active: false,
+    startDistance: 0,
+    startScale: 1,
+  });
 
   const filteredSites = useMemo(() => {
     if (!selectedType) return [];
@@ -130,10 +136,9 @@ function MapSelector({ onNext }) {
 
   useEffect(() => {
     let active = true;
-    getSites().then((items) => {
-      if (active) {
-        setSiteDetails(items);
-      }
+    getSites().then((payload) => {
+      if (!active) return;
+      setSiteDetails(payload?.sites || []);
     });
     return () => {
       active = false;
@@ -147,15 +152,22 @@ function MapSelector({ onNext }) {
     setOffset(getCenteredOffset(1));
   }, [getCenteredOffset]);
 
-  const changeZoom = (delta) => {
-    setScale((prev) => {
-      const next = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, prev + delta));
-      if (next !== prev) {
-        setOffset((prevOffset) => clampOffset(next, prevOffset));
-      }
-      return next;
-    });
-  };
+const changeZoom = (delta) => {
+  setScale((prev) => {
+    const next = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, prev + delta));
+    if (next !== prev) {
+      setOffset((prevOffset) => clampOffset(next, prevOffset));
+    }
+    return next;
+  });
+};
+
+const getDistance = (a, b) => {
+  if (!a || !b) return 0;
+  const dx = a.clientX - b.clientX;
+  const dy = a.clientY - b.clientY;
+  return Math.sqrt(dx * dx + dy * dy);
+};
 
   const handlePointerDown = (e) => {
     if (
@@ -164,20 +176,73 @@ function MapSelector({ onNext }) {
     )
       return;
     e.preventDefault();
+    pointersRef.current.set(e.pointerId, {
+      clientX: e.clientX,
+      clientY: e.clientY,
+    });
     const pan = panRef.current;
     if (pan) {
       pan.setPointerCapture(e.pointerId);
     }
-    dragRef.current = {
-      active: true,
-      pointerId: e.pointerId,
-      start: { x: e.clientX, y: e.clientY },
-      origin: { ...offset },
-    };
-    setIsDragging(true);
+
+    if (pointersRef.current.size === 1) {
+      dragRef.current = {
+        active: true,
+        pointerId: e.pointerId,
+        start: { x: e.clientX, y: e.clientY },
+        origin: { ...offset },
+      };
+      setIsDragging(true);
+    } else if (pointersRef.current.size === 2) {
+      const [a, b] = Array.from(pointersRef.current.values());
+      const distance = getDistance(a, b);
+      pinchRef.current = {
+        active: distance > 0,
+        startDistance: distance,
+        startScale: scale,
+      };
+      setIsDragging(false);
+    }
   };
 
   const handlePointerMove = (e) => {
+    const pointer = pointersRef.current.get(e.pointerId);
+    if (pointer) {
+      pointer.clientX = e.clientX;
+      pointer.clientY = e.clientY;
+    }
+
+    if (pinchRef.current.active && pointersRef.current.size >= 2) {
+      e.preventDefault();
+      const [a, b] = Array.from(pointersRef.current.values());
+      const distance = getDistance(a, b);
+      if (!distance) return;
+      const nextScale = Math.min(
+        MAX_ZOOM,
+        Math.max(
+          MIN_ZOOM,
+          (pinchRef.current.startScale * distance) /
+            pinchRef.current.startDistance
+        )
+      );
+      const frame = frameRef.current;
+      if (!frame) return;
+      const rect = frame.getBoundingClientRect();
+      const centerPx = {
+        x: (a.clientX + b.clientX) / 2 - rect.left,
+        y: (a.clientY + b.clientY) / 2 - rect.top,
+      };
+      const targetX = (centerPx.x - offset.x) / scale;
+      const targetY = (centerPx.y - offset.y) / scale;
+      const nextOffset = {
+        x: centerPx.x - targetX * nextScale,
+        y: centerPx.y - targetY * nextScale,
+      };
+      setScale(nextScale);
+      setOffset(clampOffset(nextScale, nextOffset));
+      return;
+    }
+
     if (!dragRef.current.active || dragRef.current.pointerId !== e.pointerId)
       return;
     e.preventDefault();
@@ -191,14 +256,19 @@ function MapSelector({ onNext }) {
   };
 
   const handlePointerUp = (e) => {
-    if (dragRef.current.pointerId !== e.pointerId) return;
-    dragRef.current = {
-      active: false,
-      pointerId: null,
-      start: { x: 0, y: 0 },
-      origin: { x: 0, y: 0 },
-    };
-    setIsDragging(false);
+    pointersRef.current.delete(e.pointerId);
+    if (dragRef.current.pointerId === e.pointerId) {
+      dragRef.current = {
+        active: false,
+        pointerId: null,
+        start: { x: 0, y: 0 },
+        origin: { x: 0, y: 0 },
+      };
+      setIsDragging(false);
+    }
+    if (pinchRef.current.active && pointersRef.current.size < 2) {
+      pinchRef.current.active = false;
+    }
     const pan = panRef.current;
     if (pan) {
       pan.releasePointerCapture(e.pointerId);

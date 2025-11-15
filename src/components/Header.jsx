@@ -1,13 +1,12 @@
-import React, { useCallback, useState } from "react";
+﻿import React, { useCallback, useState } from "react";
 
 const navLinks = [
-  { href: "#reserve-check", label: "예약확인" },
-  { href: "#cancel-refund", label: "취소/환불 신청" },
-  { href: "#customer-support", label: "고객문의" },
-  { href: "#info", label: "이용안내" },
+  { id: "lookup", label: "예약확인" },
+  { id: "inquiry", label: "고객문의" },
+  { id: "guide", label: "이용안내" },
 ];
 
-function Header() {
+function Header({ onMenuSelect }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const closeMenu = () => setIsMenuOpen(false);
   const scrollToTop = useCallback(() => {
@@ -20,6 +19,13 @@ function Header() {
     }
   };
 
+  const handleSelect = (id) => {
+    if (onMenuSelect) {
+      onMenuSelect(id);
+    }
+    scrollToTop();
+  };
+
   return (
     <header className="dc-header">
       <div className="dc-header-inner">
@@ -29,7 +35,7 @@ function Header() {
               className="dc-logo"
               role="button"
               tabIndex={0}
-              aria-label="상단으로 이동"
+              aria-label="홈으로 이동"
               onClick={scrollToTop}
               onKeyDown={handleLogoKeyDown}
             >
@@ -41,9 +47,13 @@ function Header() {
 
         <nav className="dc-nav">
           {navLinks.map((link) => (
-            <a key={link.href} href={link.href}>
+            <button
+              key={link.id}
+              type="button"
+              onClick={() => handleSelect(link.id)}
+            >
               {link.label}
-            </a>
+            </button>
           ))}
         </nav>
 
@@ -69,9 +79,16 @@ function Header() {
             </div>
             <div className="dc-nav-sheet-links">
               {navLinks.map((link) => (
-                <a key={link.href} href={link.href} onClick={closeMenu}>
+                <button
+                  key={link.id}
+                  type="button"
+                  onClick={() => {
+                    handleSelect(link.id);
+                    closeMenu();
+                  }}
+                >
                   {link.label}
-                </a>
+                </button>
               ))}
             </div>
           </div>
@@ -83,4 +100,3 @@ function Header() {
 }
 
 export default Header;
-

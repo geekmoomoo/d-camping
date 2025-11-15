@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import CalendarGrid from "../components/CalendarGrid";
 import {
   compareISO,
@@ -124,18 +124,70 @@ function SiteSelectStep({ data, onChangeFilter, onSelectSite }) {
   };
 
   const [siteList, setSiteList] = useState([]);
+  const [siteAvailability, setSiteAvailability] = useState({});
+  const [siteCursor, setSiteCursor] = useState(null);
+  const [siteHasMore, setSiteHasMore] = useState(false);
+  const [siteLoading, setSiteLoading] = useState(false);
+  const gridWrapperRef = useRef(null);
+  const SITE_PAGE_LIMIT = 10;
+
+  const loadSites = useCallback(async ({ append = false } = {}) => {
+    if (siteLoading) {
+      return;
+    }
+    if (append && !siteCursor) {
+      return;
+    }
+    setSiteLoading(true);
+    try {
+      const options = { limit: SITE_PAGE_LIMIT };
+      if (append && siteCursor) {
+        options.startAfterId = siteCursor;
+      }
+      const payload = await getSites(options);
+      const nextSites = payload?.sites || [];
+      setSiteList((prev) => (append ? [...prev, ...nextSites] : nextSites));
+      setSiteCursor(payload?.nextStartAfter || null);
+      setSiteHasMore(Boolean(payload?.hasMore));
+    } catch (err) {
+      console.error("[SiteSelectStep] loadSites error", err);
+      if (!append) {
+        setSiteList([]);
+      }
+    } finally {
+      setSiteLoading(false);
+    }
+  }, [siteCursor, siteLoading]);
 
   useEffect(() => {
-    let active = true;
-    getSites().then((items) => {
-      if (active) {
-        setSiteList(items);
+    loadSites();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const sentinelRef = useRef(null);
+
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel || !siteHasMore) return undefined;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting && !siteLoading) {
+            loadSites({ append: true });
+          }
+        });
+      },
+      {
+        root: null,
+        rootMargin: "200px",
+        threshold: 0.1,
       }
-    });
+    );
+    observer.observe(sentinel);
     return () => {
-      active = false;
+      observer.disconnect();
     };
-  }, []);
+  }, [siteHasMore, siteLoading, loadSites]);
 
   const monthLabel = `${calYear}년 ${calMonth + 1}월`;
   const firstDay = new Date(calYear, calMonth, 1);
@@ -171,10 +223,70 @@ function SiteSelectStep({ data, onChangeFilter, onSelectSite }) {
     }
     return siteList;
   }, [siteList, data?.siteType]);
+  const filteredSiteIds = useMemo(
+    () => filteredSites.map((site) => site.id),
+    [filteredSites]
+  );
+
+  useEffect(() => {
+    if (
+      !checkIn ||
+      !checkOut ||
+      filteredSites.length === 0 ||
+      !filteredSiteIds.length
+    ) {
+      setSiteAvailability({});
+      return undefined;
+    }
+
+    const controller = new AbortController();
+    let active = true;
+
+    const fetchSiteAvailability = async () => {
+      const updates = {};
+      await Promise.all(
+        filteredSiteIds.map(async (siteId) => {
+          try {
+            const params = new URLSearchParams({
+              siteId,
+              checkIn,
+              checkOut,
+            });
+            const response = await fetch(
+              `/api/reservations/availability?${params.toString()}`,
+              { signal: controller.signal }
+            );
+            if (!response.ok) {
+              throw new Error("availability request failed");
+            }
+            const data = await response.json();
+            updates[siteId] = data.available !== false;
+          } catch (err) {
+            console.error("[SiteSelectStep] availability error", err);
+            updates[siteId] = false;
+          }
+        })
+      );
+      if (active) {
+        setSiteAvailability(updates);
+      }
+    };
+
+    fetchSiteAvailability();
+
+    return () => {
+      active = false;
+      controller.abort();
+    };
+  }, [
+    checkIn,
+    checkOut,
+    filteredSiteIds.join(","),
+  ]);
 
   return (
     <section className="dc-step-card dc-site-select-card">
-      <div className="dc-site-grid-wrapper">
+      <div className="dc-site-grid-wrapper" ref={gridWrapperRef}>
         <div className="dc-site-grid">
           {filteredSites.map((site) => (
             <div className="dc-site-card" key={site.id}>
@@ -221,15 +333,24 @@ function SiteSelectStep({ data, onChangeFilter, onSelectSite }) {
                 <div className="dc-site-left" />
                 <div className="dc-site-right">
                   <div className="dc-site-meta-info">
-                    <span className="dc-site-remain">
-                      남은 자리 {site.remain}개
-                    </span>
-                    <span className="dc-site-divider" aria-hidden="true">
-                      |
-                    </span>
-                    <span className="dc-site-price">
-                      {site.price.toLocaleString()}원~
-                    </span>
+                    {siteAvailability[site.id] === false ? (
+                      <span className="dc-site-remain dc-site-unavailable">
+                        해당 날짜 예약완료
+                      </span>
+                    ) : (
+                      <>
+                        <span className="dc-site-remain">예약 가능</span>
+                        <span
+                          className="dc-site-divider"
+                          aria-hidden="true"
+                        >
+                          |
+                        </span>
+                        <span className="dc-site-price">
+                          {site.price.toLocaleString()}원
+                        </span>
+                      </>
+                    )}
                   </div>
                   <button
                     type="button"
@@ -239,12 +360,13 @@ function SiteSelectStep({ data, onChangeFilter, onSelectSite }) {
                     예약하기
                   </button>
                 </div>
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
+        <div ref={sentinelRef} className="dc-site-sentinel" aria-hidden="true" />
       </div>
-    </div>
 
     <div className="dc-fixed-filter-bar">
         <button

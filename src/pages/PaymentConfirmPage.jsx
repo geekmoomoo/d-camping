@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { diffDays, formatDateLabel, toISO } from "../utils/date";
 
 const PENDING_KEY = "dcamp.pendingReservation";
@@ -10,23 +10,30 @@ function PaymentConfirmPage({
   extraCharge = 0,
   qa = {},
   agree = {},
+  people: selectedPeople,
   onEditReservation,
 }) {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [availability, setAvailability] = useState({
+    loading: false,
+    available: true,
+    message: "",
+  });
   const checkIn = quickData?.checkIn;
   const checkOut = quickData?.checkOut;
   const nights =
     checkIn && checkOut ? Math.max(diffDays(checkIn, checkOut), 1) : 1;
   const roomRate = site?.price || 0;
   const roomAmount = roomRate * nights;
-  const onlineTotal = roomAmount + (extraCharge || 0);
+  const onlineTotal = roomAmount;
+  const onsiteAmount = extraCharge || 0;
   const todayISO = toISO(new Date());
   const dDayCount = checkIn ? diffDays(todayISO, checkIn) : null;
   const dDayLabel =
     dDayCount !== null ? `캠핑 가는 날 D - ${Math.max(0, dDayCount)}` : "";
   const reservationId = quickData?.reservationId || site?.id || "RESERVE";
-  const people = quickData?.people || 1;
+  const people = (selectedPeople ?? quickData?.people) || 1;
   const options = useMemo(
     () =>
       extraCharge > 0
@@ -54,6 +61,12 @@ function PaymentConfirmPage({
   };
 
   const handlePayment = async () => {
+    if (!availability.available) {
+      setErrorMessage(
+        availability.message || "해당 날짜에는 예약이 완료된 사이트입니다."
+      );
+      return;
+    }
     try {
       persistPending();
       setIsLoading(true);
@@ -64,10 +77,18 @@ function PaymentConfirmPage({
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          reservationId,
           successUrl: `${window.location.origin}/payment/success`,
           failUrl: `${window.location.origin}/payment/fail`,
-          amount: Math.round(onlineTotal),
+          siteId: site?.id,
+          checkIn,
+          checkOut,
+          people,
+          extraCharge,
+          quickData,
+          site,
+          userInfo,
+          qa,
+          agree,
           customerName: userInfo?.name || "예약자",
           customerEmail: userInfo?.email || "noreply@example.com",
         }),
@@ -95,6 +116,45 @@ function PaymentConfirmPage({
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (!site?.id || !checkIn || !checkOut) {
+      setAvailability({ loading: false, available: true, message: "" });
+      return;
+    }
+    const controller = new AbortController();
+    setAvailability((prev) => ({ ...prev, loading: true }));
+    const fetchAvailability = async () => {
+      try {
+        const params = new URLSearchParams({
+          siteId: site.id,
+          checkIn,
+          checkOut,
+        });
+        const response = await fetch(
+          `/api/reservations/availability?${params.toString()}`,
+          { signal: controller.signal }
+        );
+        if (!response.ok) {
+          throw new Error("예약 가능 여부를 확인할 수 없습니다.");
+        }
+        const data = await response.json();
+        setAvailability({
+          loading: false,
+          available: !data.conflict,
+          message: data.conflict
+            ? "해당 날짜에는 이미 예약이 완료되어 있습니다."
+            : "",
+        });
+      } catch (err) {
+        if (err.name === "AbortError") return;
+        console.error("[PaymentConfirmPage] availability error", err);
+        setAvailability((prev) => ({ ...prev, loading: false }));
+      }
+    };
+    fetchAvailability();
+    return () => controller.abort();
+  }, [site?.id, checkIn, checkOut]);
 
   const checkInLabel = checkIn ? formatDateLabel(checkIn) : "-";
   const checkOutLabel = checkOut ? formatDateLabel(checkOut) : "-";
@@ -162,7 +222,7 @@ function PaymentConfirmPage({
         <hr />
         <div className="dc-payment-line">
           <span>현장 결제 금액</span>
-          <strong>{extraCharge?.toLocaleString() || "0"}원</strong>
+          <strong>{onsiteAmount.toLocaleString()}원</strong>
         </div>
         <div className="dc-payment-line total">
           <span>온라인 결제 금액</span>
@@ -170,6 +230,7 @@ function PaymentConfirmPage({
             {onlineTotal.toLocaleString()}원
           </strong>
         </div>
+
       </section>
 
       <section className="dc-payment-section">
@@ -192,6 +253,11 @@ function PaymentConfirmPage({
           </button>
         </div>
         {errorMessage && <p className="payment-error-text">{errorMessage}</p>}
+        {!availability.available && !errorMessage && (
+          <p className="payment-error-text">
+            {availability.message || "해당 날짜에는 예약이 완료된 사이트입니다."}
+          </p>
+        )}
       </section>
 
       <div className="dc-payment-fixed-bar">

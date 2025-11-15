@@ -601,6 +601,57 @@ p {
   margin-bottom: 14px;
 }
 
+.dc-inline-people-control {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: var(--dc-radius-md);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--dc-text);
+  min-height: 82px;
+  justify-content: center;
+}
+.dc-inline-people-label {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: 600;
+  text-align: left;
+}
+.dc-inline-people-ctrl {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+.dc-inline-people-ctrl button {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  background: transparent;
+  color: var(--dc-text);
+  font-size: 1rem;
+  font-weight: 600;
+}
+.dc-inline-people-value {
+  min-width: 60px;
+  text-align: center;
+  font-size: 1rem;
+  font-weight: 600;
+}
+.dc-inline-people-hint {
+  font-size: 0.75rem;
+  color: var(--dc-accent);
+  margin: 0;
+}
+.dc-inline-people-hint--strong {
+  font-weight: 700;
+  color: #f87171;
+  background: transparent;
+}
+
 .dc-qb-btn {
   border-radius: var(--dc-radius-md);
   padding: 12px 14px;
@@ -629,6 +680,20 @@ p {
   letter-spacing: 0.01em;
   color: var(--dc-muted);
   text-transform: none;
+}
+
+.dc-confirm-availability {
+  margin-top: 6px;
+  color: #f87171;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.dc-date-error {
+  margin-top: 6px;
+  color: #f87171;
+  font-weight: 600;
+  font-size: 0.85rem;
 }
 
 .dc-qb-btn-info {
@@ -1212,6 +1277,7 @@ p {
   align-items: center;
   justify-content: center;
   font-weight: 600;
+  position: relative;
 }
 
 .dc-qb-cal-cell.empty,
@@ -1224,6 +1290,21 @@ p {
 .dc-cal-cell.disabled {
   color: rgba(148, 163, 184, 0.35);
   cursor: not-allowed;
+}
+
+.dc-cal-cell.blocked,
+.dc-qb-cal-cell.blocked,
+.dc-cal-cell.blocked-range {
+  position: relative;
+}
+
+.dc-cal-cell-note,
+.dc-qb-cal-cell-note {
+  position: absolute;
+  bottom: 5px;
+  font-size: 0.6rem;
+  color: #f87171;
+  letter-spacing: 0.08em;
 }
 
 .dc-qb-cal-cell.start,
@@ -1610,6 +1691,10 @@ p {
 .dc-site-remain {
   font-size: 0.95rem;
   color: #fcd34d;
+}
+.dc-site-unavailable {
+  color: #f87171;
+  font-weight: 700;
 }
 
 .dc-site-price {

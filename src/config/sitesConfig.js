@@ -8,32 +8,32 @@ export const sites = [
   // =============================
   // 자가 카라반존 (1~7)
   // =============================
-  {id: 'CAR7', type: 'caravan', x: 40, y: 93.5},
-  {id: 'CAR6', type: 'caravan', x: 43.2, y: 93.5},
-  {id: 'CAR5', type: 'caravan', x: 46.5, y: 93.5},
-  {id: 'CAR4', type: 'caravan', x: 49.5, y: 93.5},
-  {id: 'CAR3', type: 'caravan', x: 53, y: 93.5},
-  {id: 'CAR2', type: 'caravan', x: 56, y: 93.5},
-  {id: 'CAR1', type: 'caravan', x: 59.3, y: 93.5},
+  {id: 'CAR7', type: 'caravan', x: 38, y: 90.5},
+  {id: 'CAR6', type: 'caravan', x: 42, y: 90.5},
+  {id: 'CAR5', type: 'caravan', x: 46, y: 90.5},
+  {id: 'CAR4', type: 'caravan', x: 50, y: 90.5},
+  {id: 'CAR3', type: 'caravan', x: 54, y: 90.5},
+  {id: 'CAR2', type: 'caravan', x: 58, y: 90.5},
+  {id: 'CAR1', type: 'caravan', x: 62, y: 90.5},
 
 
   // =============================
   // 카바나 데크존 (1~8)
   // =============================
 
-  {id: 'CAB8', type: 'cabana', x: 37, y: 83},
-  {id: 'CAB7', type: 'cabana', x: 40, y: 83},
-  {id: 'CAB6', type: 'cabana', x: 43, y: 83},
-  {id: 'CAB5', type: 'cabana', x: 46, y: 83},
-  {id: 'CAB4', type: 'cabana', x: 50, y: 83},
-  {id: 'CAB3', type: 'cabana', x: 53, y: 83},
-  {id: 'CAB2', type: 'cabana', x: 56, y: 83},
-  {id: 'CAB1', type: 'cabana', x: 59, y: 83},
+  {id: 'CAB8', type: 'cabana', x: 34, y: 78},
+  {id: 'CAB7', type: 'cabana', x: 38, y: 78},
+  {id: 'CAB6', type: 'cabana', x: 42, y: 78},
+  {id: 'CAB5', type: 'cabana', x: 45.5, y: 78},
+  {id: 'CAB4', type: 'cabana', x: 49.5, y: 78},
+  {id: 'CAB3', type: 'cabana', x: 53, y: 78},
+  {id: 'CAB2', type: 'cabana', x: 57, y: 78},
+  {id: 'CAB1', type: 'cabana', x: 61, y: 78},
 
   // =============================
   // 캠핑 사이트 A1 ~ A12 (하단 우측)
   // =============================
-  {id: 'A1', type: 'camp', x: 78, y: 90},
+  {id: 'A1', type: 'camp', x: 75, y: 92},
   {id: 'A2', type: 'camp', x: 82, y: 90},
   {id: 'A3', type: 'camp', x: 85, y: 90},
   {id: 'A4', type: 'camp', x: 75, y: 86},
@@ -92,18 +92,18 @@ export const sites = [
   // =============================
   // 숙박시설 D1 ~ D14 (상단 검은 건물)
   // =============================
-  {id: 'D1', type: 'room', x: 51.20192307692307, y: 18.76368774284705},
-  {id: 'D2', type: 'room', x: 53, y: 17},
-  {id: 'D3', type: 'room', x: 56.31009615384615, y: 16.653714823972685},
-  {id: 'D4', type: 'room', x: 58.894230769230774, y: 15.674084540209584},
-  {id: 'D5', type: 'room', x: 61.53846153846154, y: 14.468385729424233},
-  {id: 'D6', type: 'room', x: 47.71634615384615, y: 20.120098904980573},
-  {id: 'D7', type: 'room', x: 43.81009615384615, y: 11.45413870246085},
-  {id: 'D8', type: 'room', x: 46.33413461538461, y: 10.549864594371835},
-  {id: 'D9', type: 'room', x: 48.97836538461539, y: 9.419521959260567},
-  {id: 'D10', type: 'room', x: 51.682692307692314, y: 8.364535499823383},
-  {id: 'D11', type: 'room', x: 54.14663461538461, y: 7.46026139173437},
-  {id: 'D12', type: 'room', x: 57.21153846153846, y: 6.103850229600847},
-  {id: 'D13', type: 'room', x: 59.79567307692307, y: 4.97350759448958},
-  {id: 'D14', type: 'room', x: 62.25961538461539, y: 3.918521135052396},
+  {id: 'D1', type: 'room', x: 50, y: 25},
+  {id: 'D2', type: 'room', x: 54, y: 24},
+  {id: 'D3', type: 'room', x: 58, y: 23},
+  {id: 'D4', type: 'room', x: 62, y: 22},
+  {id: 'D5', type: 'room', x: 66, y: 21},
+  {id: 'D6', type: 'room', x: 46, y: 26},
+  {id: 'D7', type: 'room', x: 39, y: 18},
+  {id: 'D8', type: 'room', x: 42.5, y: 17},
+  {id: 'D9', type: 'room', x: 45.5, y: 15},
+  {id: 'D10', type: 'room', x: 49, y: 13},
+  {id: 'D11', type: 'room', x: 53, y: 11},
+  {id: 'D12', type: 'room', x: 57, y: 9},
+  {id: 'D13', type: 'room', x: 61, y: 7},
+  {id: 'D14', type: 'room', x: 65, y: 5},
 ];

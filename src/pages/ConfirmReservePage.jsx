@@ -221,6 +221,11 @@ function ConfirmReservePage({ quickData, site, onProceed }) {
   const firstQaRef = useRef(null);
   const agreeRef = useRef(null);
   const [highlightTarget, setHighlightTarget] = useState(null);
+  const [availability, setAvailability] = useState({
+    loading: false,
+    available: true,
+    message: "",
+  });
 
   const handleExtraChange = (delta) => {
     setExtraCnt((prev) => {
@@ -254,6 +259,57 @@ function ConfirmReservePage({ quickData, site, onProceed }) {
       setAgree(next);
     }
   };
+
+  useEffect(() => {
+    if (!site?.id || !checkIn || !checkOut) {
+      setAvailability({
+        loading: false,
+        available: true,
+        message: "",
+      });
+      return;
+    }
+    let cancelled = false;
+    const controller = new AbortController();
+    setAvailability((prev) => ({ ...prev, loading: true }));
+    const fetchAvailability = async () => {
+      try {
+        const params = new URLSearchParams({
+          siteId: site.id,
+          checkIn,
+          checkOut,
+        });
+        const response = await fetch(
+          `/api/reservations/availability?${params.toString()}`,
+          { signal: controller.signal }
+        );
+        if (!response.ok) {
+          throw new Error("예약 가능 여부를 확인할 수 없습니다.");
+        }
+        const data = await response.json();
+        if (!cancelled) {
+          setAvailability({
+            loading: false,
+            available: !data.conflict,
+            message: data.conflict
+              ? "해당 날짜는 이미 예약이 완료된 기간입니다."
+              : "",
+          });
+        }
+      } catch (err) {
+        if (err.name === "AbortError") return;
+        console.error("[ConfirmReservePage] availability error", err);
+        if (!cancelled) {
+          setAvailability((prev) => ({ ...prev, loading: false }));
+        }
+      }
+    };
+    fetchAvailability();
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, [site?.id, checkIn, checkOut]);
 
   useEffect(() => {
     if (!highlightTarget) return undefined;
@@ -319,6 +375,10 @@ function ConfirmReservePage({ quickData, site, onProceed }) {
       focusAndHighlight(next.key);
       return;
     }
+    if (!availability.available) {
+      setHighlightTarget("info");
+      return;
+    }
     if (typeof onProceed === "function") {
       onProceed({
         userInfo: { name, phone, email, request },
@@ -346,7 +406,7 @@ function ConfirmReservePage({ quickData, site, onProceed }) {
         >
           <div className="dc-confirm-camp-name">{displayTitle}</div>
 
-          <div className="dc-confirm-date-cards">
+        <div className="dc-confirm-date-cards">
           <div className="dc-confirm-date-card">
             <div className="label">입실일</div>
             <div className="date">
@@ -360,6 +420,11 @@ function ConfirmReservePage({ quickData, site, onProceed }) {
             </div>
           </div>
         </div>
+        {!availability.available && (
+          <p className="dc-confirm-availability">
+            {availability.message || "해당 날짜는 예약이 불가능합니다."}
+          </p>
+        )}
 
         <div className="dc-confirm-dday">
           캠핑 가는 날 <span className="point">{dLabel}</span>
@@ -570,14 +635,15 @@ function ConfirmReservePage({ quickData, site, onProceed }) {
         </ul>
       </section>
 
-      <div className="dc-confirm-submit-wrap">
-        <button
-          type="submit"
-          className="dc-confirm-submit-btn"
-        >
-          {buttonMessage}
-        </button>
-      </div>
+        <div className="dc-confirm-submit-wrap">
+          <button
+            type="submit"
+            className="dc-confirm-submit-btn"
+            disabled={!availability.available}
+          >
+            {buttonMessage}
+          </button>
+        </div>
     </form>
     {activeTerm && (
       <TermsModal term={activeTerm} onClose={() => setActiveTermKey(null)} />

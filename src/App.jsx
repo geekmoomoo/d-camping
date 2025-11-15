@@ -12,7 +12,6 @@ import PaymentConfirmPage from "./pages/PaymentConfirmPage";
 import PaymentSuccessPage from "./pages/PaymentSuccessPage";
 import PaymentFailPage from "./pages/PaymentFailPage";
 import ReservationLookupPage from "./pages/ReservationLookupPage";
-import CancelRequestPage from "./pages/CancelRequestPage";
 import CustomerInquiryPage from "./pages/CustomerInquiryPage";
 import UsageGuidePage from "./pages/UsageGuidePage";
 
@@ -33,7 +32,6 @@ function App() {
 
   const menuItems = [
     { id: "lookup", label: "예약확인" },
-    { id: "cancel", label: "취소/환불 요청" },
     { id: "inquiry", label: "고객문의" },
     { id: "guide", label: "이용안내" },
   ];
@@ -68,12 +66,16 @@ function App() {
       extraCharge: payload?.extraCharge || 0,
       qa: payload?.qa || {},
       agree: payload?.agree || {},
+      people: payload?.people ?? quickData?.people ?? 1,
     });
     setStep("payment");
   };
   const handleUpdateDatesFromDetail = (partial) => { setQuickData((prev) => ({ ...(prev || {}), ...partial })); };
 
   const headerTitle = getHeaderTitle(step, quickData, selectedSite);
+  const handleMenuSelect = (pageId) => {
+    setActivePage(pageId);
+  };
 
   const handleBack = () => {
     if (step === "select-site") { setStep("home"); setSelectedSite(null); }
@@ -98,11 +100,11 @@ function App() {
   }`;
 
   const renderMenuBar = () => (
-    <div
-      className="dc-page-menu"
-      style={{
+      <div
+        className="dc-page-menu"
+        style={{
         display: "grid",
-        gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+        gridTemplateColumns: `repeat(${menuItems.length}, minmax(0, 1fr))`,
         gap: 8,
         padding: "8px 16px",
       }}
@@ -132,14 +134,12 @@ function App() {
 
   const pageTitleMap = {
     lookup: "예약확인",
-    cancel: "취소/환불 요청",
     inquiry: "고객문의",
     guide: "이용안내",
   };
 
   const renderExtraPage = () => {
     if (activePage === "lookup") return <ReservationLookupPage />;
-    if (activePage === "cancel") return <CancelRequestPage />;
     if (activePage === "inquiry") return <CustomerInquiryPage />;
     if (activePage === "guide") return <UsageGuidePage />;
     return null;
@@ -183,10 +183,14 @@ function App() {
 
   return (
     <div className={pageClassName}>
-      {renderMenuBar()}
+      {!isHome &&
+        step !== "select-site" &&
+        step !== "site-detail" &&
+        step !== "confirm" &&
+        renderMenuBar()}
       {isMainView ? (
         <>
-          {isHome && <Header />}
+          {isHome && <Header onMenuSelect={handleMenuSelect} />}
           {isHome ? (
             <main className="dc-home-main">
               <HomePage onQuickNext={handleQuickNext} onMapNext={handleMapNext} />
@@ -225,6 +229,7 @@ function App() {
                 extraCharge={paymentPayload.extraCharge}
                 qa={paymentPayload.qa}
                 agree={paymentPayload.agree}
+                people={paymentPayload.people}
                 onEditReservation={() => setStep("confirm")}
               />
             )}

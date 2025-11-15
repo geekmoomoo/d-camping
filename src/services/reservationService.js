@@ -14,44 +14,53 @@ export async function searchReservations(criteria) {
     headers: { "Content-Type": "application/json" },
   });
   if (!response.ok) {
-    throw new Error("예약 조회에 실패했습니다.");
+    throw new Error("Failed to search reservations.");
   }
   return response.json();
 }
 
-/**
- * @typedef {Object} CancelPayload
- * @property {string} reservationId
- * @property {string} name
- * @property {string} phone
- * @property {{ bank: string; account: string; holder: string }} bankInfo
- * @property {string} reason
- */
-
-export async function requestCancel(payload) {
-  console.log("cancel request payload:", payload);
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve({ success: true });
-    }, 500);
+export async function lookupReservation({ reservationId, phone }) {
+  const response = await fetch(`/api/reservations/lookup`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ reservationId, phone }),
   });
-  // TODO: call `/api/reservations/cancel` with the payload when backend exists
+  if (!response.ok) {
+    throw new Error("Reservation lookup failed.");
+  }
+  return response.json();
 }
 
-/**
- * @typedef {Object} InquiryPayload
- * @property {string} name
- * @property {string} phone
- * @property {string} category
- * @property {string} message
- */
+export async function requestRefund(payload) {
+  const response = await fetch("/api/refunds", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) {
+    throw new Error("Failed to submit refund request.");
+  }
+  return response.json();
+}
+
+export async function requestCancel(payload) {
+  const { reservationId, phone, reason } = payload;
+  return requestRefund({
+    reservationId,
+    phone,
+    reason,
+    causeType: "GUEST",
+  });
+}
 
 export async function submitInquiry(payload) {
-  console.log("inquiry payload:", payload);
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve({ success: true });
-    }, 500);
+  const response = await fetch("/api/inquiries", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
   });
-  // TODO: call `/api/reservations/inquiry` once API is ready
+  if (!response.ok) {
+    throw new Error("Failed to submit inquiry.");
+  }
+  return response.json();
 }

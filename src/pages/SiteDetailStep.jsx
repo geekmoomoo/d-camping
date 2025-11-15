@@ -32,6 +32,7 @@ function SiteDetailStep({ data, site, onReserve, onUpdateDates }) {
   const [checkIn, setCheckIn] = useState(data?.checkIn || "");
   const [checkOut, setCheckOut] = useState(data?.checkOut || "");
   const [people] = useState(data?.people || 2);
+  const [calendarError, setCalendarError] = useState("");
 
   const [isDateSheetOpen, setIsDateSheetOpen] = useState(false);
 
@@ -65,6 +66,10 @@ function SiteDetailStep({ data, site, onReserve, onUpdateDates }) {
     setCalYear(y);
     setCalMonth(m);
   };
+
+  useEffect(() => {
+    setCalendarError("");
+  }, [site?.id, calYear, calMonth]);
 
   const openDateSheet = () => {
     const base = parseISO(checkIn) || today;
@@ -294,7 +299,20 @@ function SiteDetailStep({ data, site, onReserve, onUpdateDates }) {
               onDateClick={handleDateClick}
               monthLabel={monthLabel}
               onMonthChange={handleMonthChange}
+              siteId={site?.id}
+              year={calYear}
+              month={calMonth + 1}
+              onBlockedDate={(type) => {
+                if (type === "range") {
+                  setCalendarError("예약 불가 날짜를 포함하고 있습니다.");
+                } else {
+                  setCalendarError("이미 예약이 완료된 날짜입니다.");
+                }
+              }}
             />
+            {calendarError && (
+              <p className="dc-date-error">{calendarError}</p>
+            )}
             <button
               type="button"
               className="dc-qb-sheet-btn"
