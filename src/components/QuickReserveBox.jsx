@@ -18,7 +18,6 @@ function QuickReserveBox({ onNext }) {
   const [error, setError] = useState("");
 
   const [isDateSheetOpen, setIsDateSheetOpen] = useState(false);
-  const [isPeopleSheetOpen, setIsPeopleSheetOpen] = useState(false);
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -52,18 +51,10 @@ function QuickReserveBox({ onNext }) {
     setCalYear(base.getFullYear());
     setCalMonth(base.getMonth());
     setIsDateSheetOpen(true);
-    setIsPeopleSheetOpen(false);
   };
 
-  const openPeopleSheet = () => {
-    setError("");
-    setIsPeopleSheetOpen(true);
+  const closeDateSheet = () => {
     setIsDateSheetOpen(false);
-  };
-
-  const closeSheets = () => {
-    setIsDateSheetOpen(false);
-    setIsPeopleSheetOpen(false);
   };
 
   const daysInMonth = (y, m) => new Date(y, m + 1, 0).getDate();
@@ -119,7 +110,7 @@ function QuickReserveBox({ onNext }) {
       return;
     }
     setError("");
-    closeSheets();
+    closeDateSheet();
   };
 
   const handlePeopleChange = (delta) => {
@@ -129,11 +120,6 @@ function QuickReserveBox({ onNext }) {
       if (next > 16) return 16;
       return next;
     });
-  };
-
-  const handlePeopleConfirm = () => {
-    setError("");
-    closeSheets();
   };
 
   const handleSubmit = (e) => {
@@ -183,7 +169,7 @@ function QuickReserveBox({ onNext }) {
     setSiteType("all");
     setDDay(null);
     setError("");
-    closeSheets();
+    closeDateSheet();
   };
 
   useEffect(() => {
@@ -252,7 +238,7 @@ function QuickReserveBox({ onNext }) {
                       : "dc-qb-btn-main dc-qb-bar-placeholder"
                   }
                 >
-                  {checkIn && checkOut ? rangeText : "날짜선택"}
+                  {checkIn && checkOut ? rangeText : "날짜 선택"}
                 </span>
                 <span className="dc-qb-btn-sub">
                   {checkIn && dDay !== null ? `D-${dDay}` : "D-day"}
@@ -261,21 +247,35 @@ function QuickReserveBox({ onNext }) {
             </div>
           </button>
 
-          <button
-            type="button"
-            className="dc-qb-btn dc-qb-people-btn"
-            onClick={openPeopleSheet}
-          >
+          <div className="dc-inline-people-control">
             <div className="dc-qb-btn-label">
-              <span className="dc-qb-bar-icon">👤</span>
-              <div className="dc-qb-btn-info">
-                <span className="dc-qb-btn-main">인원 {people}명</span>
-                {/* <span className="dc-qb-btn-sub">변경</span> */}
+              <span className="dc-qb-bar-icon">👥</span>
+              <div className="dc-inline-people-row">
+                <button
+                  type="button"
+                  className="dc-inline-people-btn"
+                  onClick={() => handlePeopleChange(-1)}
+                  disabled={people <= 1}
+                  aria-label="인원 줄이기"
+                >
+                  -
+                </button>
+                <span className="dc-inline-people-value vertical-align">
+                  인원 {people}명
+                </span>
+                <button
+                  type="button"
+                  className="dc-inline-people-btn"
+                  onClick={() => handlePeopleChange(1)}
+                  disabled={people >= 16}
+                  aria-label="인원 늘리기"
+                >
+                  +
+                </button>
               </div>
             </div>
-          </button>
+          </div>
         </div>
-
         <div className="dc-qb-type-label">
           이용 유형
           <span className="dc-qb-type-tip">(선택 안 하면 전체 보기)</span>
@@ -329,11 +329,11 @@ function QuickReserveBox({ onNext }) {
 
       {isDateSheetOpen && (
         <>
-          <div className="dc-qb-sheet-backdrop" onClick={closeSheets} />
+          <div className="dc-qb-sheet-backdrop" onClick={closeDateSheet} />
           <div className="dc-qb-sheet dc-qb-sheet-open">
             <div className="dc-qb-sheet-header">
               <div>날짜 선택</div>
-              <button type="button" onClick={closeSheets}>
+              <button type="button" onClick={closeDateSheet}>
                 ✕
               </button>
             </div>
@@ -389,42 +389,7 @@ function QuickReserveBox({ onNext }) {
         </>
       )}
 
-      {isPeopleSheetOpen && (
-        <>
-          <div className="dc-qb-sheet-backdrop" onClick={closeSheets} />
-          <div className="dc-qb-sheet dc-qb-sheet-open">
-            <div className="dc-qb-sheet-header">
-              <div>인원 선택</div>
-              <button type="button" onClick={closeSheets}>
-                ✕
-              </button>
-            </div>
-            <div className="dc-qb-sheet-sub">
-              <span className="dc-text-orange">유아 및 아동</span>도 인원수에{" "}
-              <span className="dc-text-orange">포함</span>해주세요.
-            </div>
-            <div className="dc-qb-people-row">
-              <span>인원</span>
-              <div className="dc-qb-people-ctrl">
-                <button type="button" onClick={() => handlePeopleChange(-1)}>
-                  -
-                </button>
-                <span>{people}</span>
-                <button type="button" onClick={() => handlePeopleChange(1)}>
-                  +
-                </button>
-              </div>
-            </div>
-            <button
-              type="button"
-              className="dc-qb-sheet-btn"
-              onClick={handlePeopleConfirm}
-            >
-              적용하기
-            </button>
-          </div>
-        </>
-      )}
+
     </>
   );
 }

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import CalendarGrid from "../components/CalendarGrid";
 import CancelPolicyAccordion from "../components/CancelPolicyAccordion";
 import SiteImageCarousel from "../components/SiteImageCarousel";
@@ -9,6 +9,7 @@ import {
   parseISO,
   toISO,
 } from "../utils/date";
+import { ensureHtmlParagraphs, sanitizeHtml } from "../utils/html";
 
 const fallbackImages = [
   "/site_img/site_001.jpg",
@@ -25,9 +26,35 @@ const TYPE_LABELS = {
 };
 
 function SiteDetailStep({ data, site, onReserve, onUpdateDates }) {
-  const metaTitle = site?.name || "카바나 데크";
+  const metaTitle = site?.name || "카라반 캠핑";
+  const heroImageUrl = useMemo(() => {
+    const candidate = site?.mainImageUrl;
+    if (typeof candidate !== "string") return null;
+    const trimmed = candidate.trim();
+    return trimmed || null;
+  }, [site?.mainImageUrl]);
   const images = site?.images?.length ? site.images : fallbackImages;
   const typeLabel = TYPE_LABELS[site?.type] || "캠핑";
+  const productDescriptionHtml = ensureHtmlParagraphs(site?.productDescription || "");
+  const hasProductDescriptionHtml = Boolean(productDescriptionHtml.trim());
+  const galleryImages = useMemo(() => {
+    if (!Array.isArray(site?.galleryImageUrls)) return [];
+    const hero = heroImageUrl;
+    return site.galleryImageUrls
+      .map((url) => (typeof url === "string" ? url.trim() : ""))
+      .filter((url) => url && (!hero || url !== hero));
+  }, [site?.galleryImageUrls, heroImageUrl]);
+  const sanitizedNoticeHighlight = sanitizeHtml(site?.noticeHighlight || "");
+  const noticeHtmlContent = ensureHtmlParagraphs(site?.noticeHtml || "");
+  const hasNoticeHtml = Boolean(noticeHtmlContent.trim());
+  const noticeHighlight = useMemo(() => {
+    if (typeof site?.noticeHighlight !== "string") return "";
+    return site.noticeHighlight.trim();
+  }, [site?.noticeHighlight]);
+  const noticeLineList = useMemo(() => {
+    if (!Array.isArray(site?.noticeLines)) return [];
+    return site.noticeLines.filter((line) => typeof line === "string" && line.trim());
+  }, [site?.noticeLines]);
 
   const [checkIn, setCheckIn] = useState(data?.checkIn || "");
   const [checkOut, setCheckOut] = useState(data?.checkOut || "");
@@ -153,7 +180,30 @@ function SiteDetailStep({ data, site, onReserve, onUpdateDates }) {
   return (
     <>
       <section className="dc-step-card dc-step-card-site">
-        <SiteImageCarousel images={images} />
+        {heroImageUrl ? (
+          <div
+            className="dc-site-hero-image"
+            style={{
+              borderRadius: 12,
+              overflow: "hidden",
+              marginBottom: 16,
+              boxShadow: "0 12px 32px rgba(0,0,0,0.15)",
+            }}
+          >
+            <img
+              src={heroImageUrl}
+              alt={`${metaTitle} 대표 이미지`}
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+                display: "block",
+              }}
+            />
+          </div>
+        ) : (
+          <SiteImageCarousel images={images} />
+        )}
 
         <div className="dc-site-info-block">
           <div className="dc-site-title">{metaTitle}</div>
@@ -219,6 +269,82 @@ function SiteDetailStep({ data, site, onReserve, onUpdateDates }) {
           </ul>
         </div>
 
+
+        {hasProductDescriptionHtml && (
+          <div className="dc-site-desc" style={{ marginTop: 24 }}>
+            <div className="dc-site-desc-title">상품소개</div>
+            <div
+              className="dc-site-desc-text"
+              dangerouslySetInnerHTML={{ __html: productDescriptionHtml }}
+            />
+          </div>
+        )}
+        {galleryImages.length > 0 && (
+          <div className="dc-site-desc" style={{ marginTop: 24 }}>
+            <div className="dc-site-desc-title">사이트 사진</div>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+                gap: 12,
+                marginTop: 12,
+              }}
+            >
+              {galleryImages.map((url, index) => (
+                <div
+                  key={`gallery-${index}`}
+                  style={{
+                    borderRadius: 12,
+                    overflow: "hidden",
+                    minHeight: 100,
+                    backgroundColor: "#070707",
+                  }}
+                >
+                  <img
+                    src={url}
+                    alt={`${metaTitle} 사진 ${index + 1}`}
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                      display: "block",
+                    }}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        {(sanitizedNoticeHighlight || hasNoticeHtml || noticeLineList.length > 0) && (
+          <div className="dc-site-desc" style={{ marginTop: 24 }}>
+            <div className="dc-site-desc-title">알립니다</div>
+            {sanitizedNoticeHighlight && (
+              <div
+                style={{
+                  backgroundColor: "#fff6d4",
+                  border: "1px solid #ffd966",
+                  borderRadius: 8,
+                  padding: "12px 16px",
+                  marginBottom: 12,
+                }}
+              >
+                <span dangerouslySetInnerHTML={{ __html: sanitizedNoticeHighlight }} />
+              </div>
+            )}
+            {hasNoticeHtml ? (
+              <div
+                className="dc-site-desc-text"
+                dangerouslySetInnerHTML={{ __html: noticeHtmlContent }}
+              />
+            ) : noticeLineList.length > 0 ? (
+              <ul className="dc-site-desc-list">
+                {noticeLineList.map((line, index) => (
+                  <li key={`notice-line-${index}`}>{line}</li>
+                ))}
+              </ul>
+            ) : null}
+          </div>
+        )}
         <div className="dc-site-desc">
           <div className="dc-site-desc-title">알립니다</div>
           <div className="dc-site-alert">

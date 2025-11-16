@@ -10,6 +10,32 @@ import {
 import { getSites } from "../services/siteService";
 
 
+const parseSiteIdParts = (siteIdValue) => {
+  const text = String(siteIdValue || "").trim().toUpperCase();
+  const match = text.match(/^([A-Z]+)(\d+)$/i);
+  if (!match) {
+    return { prefix: text, number: null, raw: text };
+  }
+  return { prefix: match[1], number: Number(match[2]), raw: text };
+};
+
+const compareSiteId = (a, b) => {
+  const idA = parseSiteIdParts(a?.siteId || a?.id);
+  const idB = parseSiteIdParts(b?.siteId || b?.id);
+  const prefixDiff = idA.prefix.localeCompare(idB.prefix);
+  if (prefixDiff !== 0) {
+    return prefixDiff;
+  }
+  if (idA.number !== null && idB.number !== null) {
+    return idA.number - idB.number;
+  }
+  if (idA.number !== null) return -1;
+  if (idB.number !== null) return 1;
+  return idA.raw.localeCompare(idB.raw);
+};
+
+const sortSitesById = (sites) => [...sites].sort(compareSiteId);
+
 function SiteSelectStep({ data, onChangeFilter, onSelectSite }) {
   const initialCheckIn = data?.checkIn || "";
   const initialCheckOut = data?.checkOut || "";
@@ -146,7 +172,10 @@ function SiteSelectStep({ data, onChangeFilter, onSelectSite }) {
       }
       const payload = await getSites(options);
       const nextSites = payload?.sites || [];
-      setSiteList((prev) => (append ? [...prev, ...nextSites] : nextSites));
+      setSiteList((prev) => {
+        const combined = append ? [...prev, ...nextSites] : nextSites;
+        return sortSitesById(combined);
+      });
       setSiteCursor(payload?.nextStartAfter || null);
       setSiteHasMore(Boolean(payload?.hasMore));
     } catch (err) {

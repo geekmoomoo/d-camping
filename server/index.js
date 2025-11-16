@@ -33,8 +33,16 @@ app.use(express.json());
 
 const reservationsRef = db.collection("reservations");
 const sitesRef = db.collection("sites");
+const inquiriesRef = db.collection("inquiries");
 const SECRET_KEY = process.env.TOSS_SECRET_KEY;
 const USE_FAKE_TOSS_CONFIRM = process.env.USE_FAKE_TOSS_CONFIRM === "true";
+const ADMIN_ALLOWED_STATUSES = [
+  "PENDING",
+  "PAID",
+  "CANCELED",
+  "NO_SHOW",
+  "REFUNDED",
+];
 
 const ensureSecretKey = () => {
   if (!SECRET_KEY) {
@@ -46,6 +54,199 @@ const ensureSecretKey = () => {
 
 const normalizePhone = (value) =>
   String(value || "").replace(/[^0-9]/g, "");
+
+const trimToNull = (value) => {
+  if (typeof value !== "string") {
+    return value ?? null;
+  }
+  const trimmed = value.trim();
+  return trimmed || null;
+};
+
+const getKstDateString = (date = new Date()) => {
+  const offsetMs = 9 * 60 * 60 * 1000;
+  const kst = new Date(date.getTime() + offsetMs);
+  return kst.toISOString().slice(0, 10);
+};
+
+const getMonthRangeBounds = (value) => {
+  const [year, month] = value.split("-").map(Number);
+  if (!year || !month || month < 1 || month > 12) {
+    return null;
+  }
+  const start = `${year}-${String(month).padStart(2, "0")}-01`;
+  const lastDay = new Date(year, month, 0).getDate();
+  const end = `${year}-${String(month).padStart(2, "0")}-${String(lastDay).padStart(
+    2,
+    "0"
+  )}`;
+  return { start, end };
+};
+
+const getReservationAmount = (reservation) => {
+  const breakdown = reservation.amountBreakdown || {};
+  return (
+    breakdown.total ??
+    reservation.totalAmount ??
+    reservation.quickData?.totalAmount ??
+    0
+  );
+};
+
+const isValidDate = (value) => {
+  if (!value) return false;
+  const date = new Date(`${value}T00:00:00`);
+  return !Number.isNaN(date.getTime());
+};
+
+const formatDateRange = (dateString) => {
+  const date = new Date(`${dateString}T00:00:00`);
+  const year = date.getFullYear();
+  const month = date.getMonth() + 1;
+  const start = `${year}-${String(month).padStart(2, "0")}-01`;
+  const lastDay = new Date(year, month, 0).getDate();
+  const end = `${year}-${String(month).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+  return { start, end };
+};
+
+const mapSiteDoc = (doc) => {
+  const data = doc.data() || {};
+  const normalized = {
+    id: doc.id,
+    siteId: data.siteId || doc.id,
+    name: data.name || "",
+    zone: data.zone || data.siteZone || "",
+    type: data.type || data.siteType || "",
+    baseAmount:
+      data.baseAmount ??
+      data.price ??
+      data.priceOffWeekday ??
+      0,
+    defaultPeople: data.defaultPeople ?? data.basePeople ?? null,
+    maxPeople: data.maxPeople ?? null,
+    isActive: typeof data.isActive === "boolean" ? data.isActive : true,
+    mainImageUrl:
+      data.mainImageUrl ||
+      data.squareImg ||
+      data.image ||
+      (Array.isArray(data.images) ? data.images[0] : "") ||
+      "",
+    descriptionShort: data.descriptionShort || "",
+    descriptionLong: data.descriptionLong || "",
+    galleryImageUrls: Array.isArray(data.galleryImageUrls)
+      ? data.galleryImageUrls
+      : Array.isArray(data.images)
+      ? data.images
+      : [],
+    extraPersonAmount: data.extraPerPerson ?? null,
+    carOption: data.carOption || "",
+    offWeekdayAmount: data.priceOffWeekday ?? null,
+    offWeekendAmount: data.priceOffWeekend ?? null,
+    peakWeekdayAmount: data.pricePeakWeekday ?? null,
+    peakWeekendAmount: data.pricePeakWeekend ?? null,
+    productDescription: data.productDescription || "",
+    noticeHighlight: data.noticeHighlight || "",
+    noticeLines: Array.isArray(data.noticeLines) ? data.noticeLines : [],
+    noticeHtml: data.noticeHtml || "",
+  };
+  return { ...data, ...normalized };
+};
+
+const evaluatePreCheckFlags = (data = {}) => {
+  const amountBreakdown = data.amountBreakdown || {};
+  const qaValues = data.qa || {};
+  const agreeValues = data.agree || {};
+  const cancel = data.cancelRequest || {};
+  const people = data.people ?? 0;
+  const initialPeople =
+    data.initialPeople ??
+    data.quickData?.people ??
+    amountBreakdown?.people ??
+    0;
+  const hasQaIssue = Object.values(qaValues).some(
+    (value) => value === false || value === "" || value === null || value === undefined
+  );
+  const hasAgreeIssue = Object.values(agreeValues).some((value) => value === false);
+  const hasRefund = cancel.status === "REQUESTED";
+  const extraCharge = data.extraCharge ?? amountBreakdown.extraCharge ?? 0;
+  return {
+    people: {
+      active: initialPeople > 0 && people > initialPeople,
+      message:
+        initialPeople > 0 && people > initialPeople
+          ? "기준 인원보다 많은 예약입니다."
+          : "",
+    },
+    onsite: {
+      active: extraCharge > 0,
+      message: extraCharge > 0 ? "현장 결제(기타 수수료)가 있습니다." : "",
+    },
+    qa: {
+      active: hasQaIssue,
+      message: hasQaIssue ? "질문 항목이 일부 미응답입니다." : "",
+    },
+    agree: {
+      active: hasAgreeIssue,
+      message: hasAgreeIssue ? "약관 동의가 일부 미완료입니다." : "",
+    },
+    refund: {
+      active: hasRefund,
+      message: hasRefund ? "환불 요청 상태입니다." : "",
+    },
+  };
+};
+
+const mapAdminReservation = (doc) => {
+  const data = doc.data() || {};
+  const amountBreakdown = data.amountBreakdown || {};
+  const extraChargeValue =
+    data.extraCharge ?? amountBreakdown.extraCharge ?? 0;
+  const manualExtraValue =
+    amountBreakdown.manualExtra ??
+    data.manualExtra ??
+    amountBreakdown.onsiteManualExtra ??
+    0;
+  const normalizedPhone = normalizePhone(
+    data.userInfo?.phone || data.phone || ""
+  );
+  return {
+    reservationId: data.reservationId || doc.id,
+    siteId: data.siteId || data.site?.id || null,
+    siteName: data.siteName || data.site?.name || null,
+    userName: data.userInfo?.name || data.userName || null,
+    userPhone: trimToNull(data.userPhone) || null,
+    userInfo: data.userInfo || null,
+    phone: normalizedPhone,
+    checkIn: data.checkIn || null,
+    checkOut: data.checkOut || null,
+    nights: data.nights ?? 0,
+    people: data.people ?? null,
+    status: data.status || null,
+    amountBreakdown: {
+      baseAmount: amountBreakdown.baseAmount ?? data.baseAmount ?? null,
+      extraPersonAmount:
+        amountBreakdown.extraPersonAmount ?? data.extraPersonAmount ?? 0,
+      manualExtra: manualExtraValue,
+      extraCharge: extraChargeValue,
+      total:
+        amountBreakdown.total ?? data.totalAmount ?? data.amount ?? null,
+    },
+    totalAmount: data.totalAmount ?? null,
+    quickData: data.quickData || null,
+    extraCharge: extraChargeValue,
+    cancelRequest: {
+      status: data.cancelRequest?.status || "NONE",
+      reason: data.cancelRequest?.reason || null,
+      daysBeforeCheckIn:
+        data.cancelRequest?.daysBeforeCheckIn ?? null,
+      requestedAt: data.cancelRequest?.requestedAt || null,
+      adminNote: data.cancelRequest?.adminNote || null,
+    },
+    adminNotes: data.adminNotes || [],
+    preCheckFlags: evaluatePreCheckFlags(data),
+    createdAt: data.createdAt || null,
+  };
+};
 
 const calcDaysBeforeCheckIn = (checkIn) => {
   if (!checkIn) return null;
@@ -724,6 +925,13 @@ app.get("/api/sites", async (req, res) => {
       if (data?.id && data.id !== doc.id) {
         normalized.sourceId = data.id;
       }
+      const mapped = mapSiteDoc(doc);
+      normalized.mainImageUrl = mapped.mainImageUrl;
+      normalized.productDescription = mapped.productDescription;
+      normalized.galleryImageUrls = mapped.galleryImageUrls;
+      normalized.noticeHighlight = mapped.noticeHighlight;
+      normalized.noticeLines = mapped.noticeLines;
+      normalized.noticeHtml = mapped.noticeHtml;
       return normalized;
     });
 
@@ -909,26 +1117,97 @@ app.get("/api/reservations/:reservationId", async (req, res) => {
 // ===== 환불/취소 요청 API (기록만, 실제 환불 X) =====
 app.post("/api/inquiries", async (req, res) => {
   try {
-    const { name, phone, category, message } = req.body;
+    const { name, phone, email, message } = req.body || {};
     if (!name || !phone || !message) {
       return res.status(400).json({ error: "MISSING_INQUIRY_FIELDS" });
     }
-
     const nowIso = new Date().toISOString();
     const docRef = db.collection("inquiries").doc();
     await docRef.set({
       name,
       phone,
-      category: category || "GENERAL",
+      email: email || "",
       message,
-      source: "frontend",
+      status: "OPEN",
+      adminNote: "",
+      updatedAt: nowIso,
       createdAt: nowIso,
+      source: "web",
     });
-
-    return res.json({ ok: true, inquiryId: docRef.id });
+    return res.status(201).json({ ok: true, inquiryId: docRef.id });
   } catch (err) {
     console.error("[POST /api/inquiries] error", err);
     return res.status(500).json({ error: "INTERNAL_ERROR" });
+  }
+});
+
+app.get("/api/admin/inquiries", async (req, res) => {
+  try {
+    const { status, from, to } = req.query;
+    let query = inquiriesRef.orderBy("createdAt", "desc");
+    if (status) {
+      query = query.where("status", "==", status);
+    }
+    if (from) {
+      query = query.where("createdAt", ">=", from);
+    }
+    if (to) {
+      query = query.where("createdAt", "<=", to);
+    }
+    const snapshot = await query.get();
+    const items = snapshot.docs.map((doc) => {
+      const data = doc.data() || {};
+      return {
+        id: doc.id,
+        name: data.name || null,
+        phone: data.phone || null,
+        message: data.message || null,
+        status: data.status || "OPEN",
+        createdAt: data.createdAt || null,
+        updatedAt: data.updatedAt || null,
+        adminNote: data.adminNote || null,
+      };
+    });
+    return res.json({ items });
+  } catch (err) {
+    console.error("[GET /api/admin/inquiries] error", err);
+    return res.status(500).json({ error: "FAILED_TO_FETCH_INQUIRIES" });
+  }
+});
+
+app.post("/api/admin/inquiries/update", async (req, res) => {
+  const { id, status, adminNote } = req.body || {};
+  if (!id) {
+    return res.status(400).json({ error: "Inquiry id is required" });
+  }
+  try {
+    const docRef = inquiriesRef.doc(id);
+    const snap = await docRef.get();
+    if (!snap.exists) {
+      return res.status(404).json({ error: "Inquiry not found" });
+    }
+    const payload = { updatedAt: new Date().toISOString() };
+    if (status) payload.status = status;
+    if (adminNote !== undefined) payload.adminNote = adminNote;
+    await docRef.set(payload, { merge: true });
+    const updated = await docRef.get();
+    const data = updated.data() || {};
+    return res.json({
+      ok: true,
+      inquiry: {
+        id: updated.id,
+        name: data.name || null,
+        phone: data.phone || null,
+        message: data.message || null,
+        status: data.status || "OPEN",
+        createdAt: data.createdAt || null,
+        updatedAt: data.updatedAt || null,
+        adminNote: data.adminNote || null,
+      },
+    });
+  } catch (err) {
+    console.error("[POST /api/admin/inquiries/update] error", err);
+    return res.status(500).json({ error: "FAILED_TO_UPDATE_INQUIRY" });
   }
 });
 
@@ -949,7 +1228,8 @@ app.post("/api/refunds", async (req, res) => {
 
     const data = snap.data();
 
-    const savedPhone = data.userInfo?.phone;
+    const savedPhone =
+      data.userInfo?.phone || data.userPhone || data.phone || "";
     if (!savedPhone) {
       return res.status(400).json({ error: "MISSING_SAVED_PHONE" });
     }
@@ -1002,6 +1282,441 @@ app.post("/api/refunds", async (req, res) => {
 });
 
 app.get("/api/health", (req, res) => res.json({ ok: true }));
+
+app.get("/api/admin/refund-requests", async (req, res) => {
+  try {
+    const snapshot = await reservationsRef
+      .where("status", "==", "PAID")
+      .where("cancelRequest.status", "==", "REQUESTED")
+      .get();
+      const list = snapshot.docs.map((doc) => {
+        const data = doc.data() || {};
+        const cancel = data.cancelRequest || {};
+        const userInfo = data.userInfo || {};
+        const breakdown = {
+          baseAmount:
+            data.amountBreakdown?.baseAmount ??
+            data.baseAmount ??
+            data.totalAmount ??
+            null,
+          totalAmount:
+            data.amountBreakdown?.totalAmount ??
+            data.totalAmount ??
+            data.baseAmount ??
+            null,
+        };
+        return {
+          reservationId: doc.id,
+          userName: userInfo.name || data.userName || null,
+          userPhone: normalizePhone(userInfo.phone || data.phone || ""),
+          siteId: data.siteId || (data.site && data.site.id) || null,
+          siteName: data.siteName || (data.site && data.site.name) || null,
+          zone:
+            data.siteZone ||
+            data.zone ||
+            (data.site && data.site.zone) ||
+            null,
+          checkIn: data.checkIn || null,
+          checkOut: data.checkOut || null,
+          people: data.people ?? data.guests ?? null,
+          amount: data.totalAmount ?? data.baseAmount ?? null,
+          amountBreakdown: breakdown,
+          reason: cancel.reason || null,
+          requestedAt: cancel.requestedAt || null,
+          daysBeforeCheckIn:
+            cancel.daysBeforeCheckIn !== undefined
+              ? cancel.daysBeforeCheckIn
+              : null,
+        };
+      });
+    return res.json(list);
+  } catch (err) {
+    console.error("[/api/admin/refund-requests] error", err);
+    return res
+      .status(500)
+      .json({ error: "FAILED_TO_FETCH_REFUND_REQUESTS" });
+  }
+});
+
+app.post("/api/admin/refund-requests/update", async (req, res) => {
+  const { reservationId, status, adminNote = "" } = req.body || {};
+  if (!reservationId || !status) {
+    return res
+      .status(400)
+      .json({ error: "reservationId and status are required" });
+  }
+  try {
+    await reservationsRef.doc(reservationId).set(
+      {
+        cancelRequest: {
+          status,
+          adminNote,
+          updatedAt: new Date().toISOString(),
+        },
+      },
+      { merge: true }
+    );
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error("[/api/admin/refund-requests/update] error", err);
+    return res
+      .status(500)
+      .json({ error: "FAILED_TO_UPDATE_REFUND_REQUEST" });
+  }
+});
+
+app.get("/api/admin/reservations", async (req, res) => {
+  try {
+    let query = reservationsRef;
+    const { checkInStart, checkInEnd, siteId, name, phone, status } = req.query;
+    if (status) {
+      query = query.where("status", "==", status);
+    }
+    if (siteId) {
+      query = query.where("siteId", "==", siteId);
+    }
+    if (checkInStart && checkInEnd) {
+      const startDate = new Date(`${checkInStart}T00:00:00`);
+      const endDate = new Date(`${checkInEnd}T23:59:59`);
+      if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
+        return res.status(400).json({ error: "INVALID_DATE_RANGE" });
+      }
+      if (startDate > endDate) {
+        return res.status(400).json({ error: "INVALID_DATE_RANGE" });
+      }
+      query = query
+        .where("checkIn", ">=", checkInStart)
+        .where("checkIn", "<=", checkInEnd);
+    } else if (checkInStart) {
+      const startDate = new Date(`${checkInStart}T00:00:00`);
+      if (Number.isNaN(startDate.getTime())) {
+        return res.status(400).json({ error: "INVALID_DATE_RANGE" });
+      }
+      query = query.where("checkIn", ">=", checkInStart);
+    } else if (checkInEnd) {
+      const endDate = new Date(`${checkInEnd}T23:59:59`);
+      if (Number.isNaN(endDate.getTime())) {
+        return res.status(400).json({ error: "INVALID_DATE_RANGE" });
+      }
+      query = query.where("checkIn", "<=", checkInEnd);
+    }
+
+    const snapshot = await query.get();
+    const normalizedFilterPhone = normalizePhone(phone);
+    let filtered = snapshot.docs
+      .map(mapAdminReservation)
+      .filter((item) => {
+        if (name && !String(item.userInfo?.name || item.userName || "")
+          .toLowerCase()
+          .includes(name.toLowerCase())) {
+          return false;
+        }
+        if (phone && normalizePhone(item.userInfo?.phone || item.phone || "")
+          .indexOf(normalizedFilterPhone) === -1) {
+          return false;
+        }
+        return true;
+      });
+    return res.json({ reservations: filtered });
+  } catch (err) {
+    console.error("[/api/admin/reservations] error", err);
+    return res
+      .status(500)
+      .json({ error: "FAILED_TO_FETCH_RESERVATIONS", detail: err.message });
+  }
+});
+
+app.get("/api/admin/reservations/today", async (req, res) => {
+  try {
+    const targetDate = req.query.date || getKstDateString();
+    const snapshot = await reservationsRef
+      .where("status", "==", "PAID")
+      .get();
+    const allPaid = snapshot.docs.map(mapAdminReservation);
+    const checkInToday = allPaid.filter(
+      (item) => item.checkIn === targetDate
+    );
+    const checkOutToday = allPaid.filter(
+      (item) => item.checkOut === targetDate
+    );
+    const inHouseToday = allPaid.filter(
+      (item) =>
+        item.checkIn &&
+        item.checkOut &&
+        item.checkIn < targetDate &&
+        item.checkOut > targetDate
+      );
+    return res.json({
+      date: targetDate,
+      checkInToday,
+      checkOutToday,
+      inHouseToday,
+    });
+  } catch (err) {
+    console.error("[/api/admin/reservations/today] error", err);
+    return res.status(500).json({ error: "FAILED_TO_FETCH_TODAY_RESERVATIONS" });
+  }
+});
+
+app.get("/api/admin/stats/summary", async (req, res) => {
+  const today = getKstDateString();
+  const defaultMonth = formatDateRange(today);
+  const fromParam = req.query.from || defaultMonth.start;
+  const toParam = req.query.to || defaultMonth.end;
+
+  if (!isValidDate(fromParam) || !isValidDate(toParam)) {
+    return res.status(400).json({ error: "INVALID_RANGE" });
+  }
+  if (new Date(`${fromParam}T00:00:00`) > new Date(`${toParam}T23:59:59`)) {
+    return res.status(400).json({ error: "INVALID_RANGE" });
+  }
+
+  try {
+    const paidSnapshot = await reservationsRef
+      .where("status", "==", "PAID")
+      .get();
+    const paidReservations = paidSnapshot.docs
+      .map(mapAdminReservation)
+      .filter(
+        (reservation) =>
+          reservation.checkIn &&
+          reservation.checkIn >= fromParam &&
+          reservation.checkIn <= toParam
+      );
+
+    const todaySnapshot = await reservationsRef
+      .where("status", "==", "PAID")
+      .get();
+    const todayReservations = todaySnapshot.docs.map(mapAdminReservation);
+
+    const topSitesMap = new Map();
+    paidReservations.forEach((reservation) => {
+      const key = reservation.siteId || "미정";
+      const count = topSitesMap.get(key) ?? { count: 0, siteName: reservation.siteName };
+      topSitesMap.set(key, {
+        count: count.count + 1,
+        siteName: reservation.siteName || count.siteName,
+      });
+    });
+
+    const topSites = Array.from(topSitesMap.entries())
+      .map(([siteId, info]) => ({
+        siteId,
+        siteName: info.siteName,
+        count: info.count,
+      }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 3);
+
+    const recentRefundSnapshot = await reservationsRef
+      .where("cancelRequest.status", "==", "REQUESTED")
+      .get();
+    const recentRefunds = recentRefundSnapshot.docs.map((doc) => {
+      const data = doc.data() || {};
+      return {
+        reservationId: doc.id,
+        siteId: data.siteId || null,
+        siteName: data.siteName || null,
+        checkIn: data.checkIn || null,
+        status: data.cancelRequest?.status || null,
+        reason: data.cancelRequest?.reason || null,
+        requestedAt: data.cancelRequest?.requestedAt || null,
+      };
+    });
+    recentRefunds.sort((a, b) => {
+      if (!a.requestedAt || !b.requestedAt) return 0;
+      return new Date(b.requestedAt) - new Date(a.requestedAt);
+    });
+    const topRecentRefunds = recentRefunds.slice(0, 5);
+
+    const todayStats = {
+      date: today,
+      checkInCount: todayReservations.filter((r) => r.checkIn === today).length,
+      checkOutCount: todayReservations.filter((r) => r.checkOut === today).length,
+      inHouseCount: todayReservations.filter(
+        (r) => r.checkIn && r.checkOut && r.checkIn <= today && r.checkOut > today
+      ).length,
+      paidAmount: todayReservations
+        .filter((r) => r.checkIn === today)
+        .reduce((sum, r) => sum + getReservationAmount(r), 0),
+      refundAmount: todayReservations
+        .filter((r) => r.cancelRequest?.status === "COMPLETED")
+        .reduce((sum, r) => sum + getReservationAmount(r), 0),
+    };
+
+    const monthStats = {
+      reservationCount: paidReservations.length,
+      cancelCount: paidReservations.filter((r) => r.cancelRequest?.status === "COMPLETED").length,
+      paidAmount: paidReservations.reduce((sum, r) => sum + getReservationAmount(r), 0),
+      refundAmount: paidReservations
+        .filter((r) => r.cancelRequest?.status === "COMPLETED")
+        .reduce((sum, r) => sum + getReservationAmount(r), 0),
+    };
+
+    return res.json({
+      range: { from: fromParam, to: toParam },
+      today: todayStats,
+      month: monthStats,
+      topSites,
+      recentRefunds: topRecentRefunds,
+    });
+  } catch (err) {
+    console.error("[/api/admin/stats/summary] error", err);
+    return res.status(500).json({ error: "STATS_SUMMARY_FAILED" });
+  }
+});
+
+app.post("/api/admin/reservations/update-status", async (req, res) => {
+  const { reservationId, status } = req.body || {};
+  if (!reservationId || !status) {
+    return res
+      .status(400)
+      .json({ error: "reservationId and status are required" });
+  }
+  if (!ADMIN_ALLOWED_STATUSES.includes(status)) {
+    return res.status(400).json({ error: "Invalid status value" });
+  }
+  try {
+    const docRef = reservationsRef.doc(reservationId);
+    const doc = await docRef.get();
+    if (!doc.exists) {
+      return res.status(404).json({ error: "Reservation not found" });
+    }
+    const now = new Date().toISOString();
+    const historyEntry = {
+      status,
+      at: now,
+      by: "ADMIN_PANEL",
+    };
+    await docRef.update({
+      status,
+      updatedAt: now,
+      statusHistory: admin.firestore.FieldValue.arrayUnion(historyEntry),
+    });
+    const updatedDoc = await docRef.get();
+    return res.json({
+      ok: true,
+      reservation: { reservationId: updatedDoc.id, ...updatedDoc.data() },
+    });
+  } catch (err) {
+    console.error("[/api/admin/reservations/update-status] error", err);
+    return res
+      .status(500)
+      .json({ error: "FAILED_TO_UPDATE_RESERVATION_STATUS" });
+  }
+});
+
+app.post("/api/admin/reservations/add-note", async (req, res) => {
+  const { reservationId, note, operator = "admin" } = req.body || {};
+  if (!reservationId || !note) {
+    return res
+      .status(400)
+      .json({ error: "reservationId and note are required" });
+  }
+  try {
+    const docRef = reservationsRef.doc(reservationId);
+    const doc = await docRef.get();
+    if (!doc.exists) {
+      return res.status(404).json({ error: "Reservation not found" });
+    }
+    const now = new Date().toISOString();
+    const noteEntry = {
+      note,
+      operator,
+      at: now,
+    };
+    await docRef.update({
+      adminNotes: admin.firestore.FieldValue.arrayUnion(noteEntry),
+    });
+    const updatedDoc = await docRef.get();
+    return res.json({
+      ok: true,
+      reservation: { reservationId: updatedDoc.id, ...updatedDoc.data() },
+    });
+  } catch (err) {
+    console.error("[/api/admin/reservations/add-note] error", err);
+    return res.status(500).json({ error: "FAILED_TO_ADD_RESERVATION_NOTE" });
+  }
+});
+
+app.get("/api/admin/sites", async (req, res) => {
+  try {
+    const snapshot = await sitesRef.get();
+    const sites = snapshot.docs.map(mapSiteDoc);
+    return res.json({ sites });
+  } catch (err) {
+    console.error("[/api/admin/sites] error", err);
+    return res.status(500).json({ error: "ADMIN_SITES_FETCH_FAILED" });
+  }
+});
+
+app.get("/api/admin/sites/:id", async (req, res) => {
+  try {
+    const doc = await sitesRef.doc(req.params.id).get();
+    if (!doc.exists) {
+      return res.status(404).json({ error: "NOT_FOUND" });
+    }
+    return res.json({ site: mapSiteDoc(doc) });
+  } catch (err) {
+    console.error("[/api/admin/sites/:id] error", err);
+    return res.status(500).json({ error: "ADMIN_SITE_DETAIL_FAILED" });
+  }
+});
+
+app.post("/api/admin/sites/update", async (req, res) => {
+  try {
+    const payload = req.body || {};
+    if (!payload.id) {
+      return res.status(400).json({ error: "MISSING_ID" });
+    }
+    const docRef = sitesRef.doc(payload.id);
+    const existing = await docRef.get();
+    if (!existing.exists) {
+      return res.status(404).json({ error: "NOT_FOUND" });
+    }
+    const fieldMap = {
+      name: "name",
+      zone: "zone",
+      type: "type",
+      baseAmount: "baseAmount",
+      defaultPeople: "defaultPeople",
+      maxPeople: "maxPeople",
+      isActive: "isActive",
+      descriptionShort: "descriptionShort",
+      descriptionLong: "descriptionLong",
+      mainImageUrl: "mainImageUrl",
+      galleryImageUrls: "galleryImageUrls",
+      extraPersonAmount: "extraPerPerson",
+      offWeekdayAmount: "priceOffWeekday",
+      offWeekendAmount: "priceOffWeekend",
+      peakWeekdayAmount: "pricePeakWeekday",
+      peakWeekendAmount: "pricePeakWeekend",
+      carOption: "carOption",
+      productDescription: "productDescription",
+      noticeHighlight: "noticeHighlight",
+      noticeLines: "noticeLines",
+      noticeHtml: "noticeHtml",
+    };
+    const updates = { updatedAt: new Date().toISOString() };
+    Object.entries(fieldMap).forEach(([payloadKey, docKey]) => {
+      if (payload[payloadKey] !== undefined) {
+        if (payloadKey === "galleryImageUrls") {
+          updates[docKey] = Array.isArray(payload[payloadKey])
+            ? payload[payloadKey]
+            : [];
+        } else {
+          updates[docKey] = payload[payloadKey];
+        }
+      }
+    });
+    await docRef.set(updates, { merge: true });
+    const updated = await docRef.get();
+    return res.json({ site: mapSiteDoc(updated) });
+  } catch (err) {
+    console.error("[/api/admin/sites/update] error", err);
+    return res.status(500).json({ error: "ADMIN_SITE_UPDATE_FAILED" });
+  }
+});
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {

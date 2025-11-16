@@ -20,7 +20,7 @@ const TYPE_OPTIONS = [
 const TYPE_FOCUS = {
   caravan: { scale: 2.5, center: { x: 49.5, y: 93.5 } },
   cabana: { scale: 2.5, center: { x: 50, y: 83 } },
-  camp: { scale: 1.5, center: { x: 50, y: 50 } },
+  camp: { scale: 1.5, center: { x: 60, y: 50 } },
   room: { scale: 2, center: { x: 53, y: 17 } },
 };
 
