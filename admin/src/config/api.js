@@ -1,4 +1,3 @@
-// src/config/api.js
 const rawApiBase = import.meta.env.VITE_API_BASE_URL;
 
 if (!rawApiBase) {

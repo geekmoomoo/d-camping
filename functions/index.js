@@ -1,39 +1,30 @@
+// functions/index.js  (서울 리전, 2nd gen, Express)
+
 const express = require("express");
 const cors = require("cors");
-const dotenv = require("dotenv");
-const admin = require("firebase-admin");
-const functions = require("firebase-functions");
-const path = require("path");
-const rootEnvPath = path.resolve(__dirname, "..", ".env");
-dotenv.config({ path: rootEnvPath });
-dotenv.config({ path: path.resolve(__dirname, ".env"), override: true });
 
-// Firebase Admin 초기화
-if (!admin.apps.length) {
-  admin.initializeApp();
-}
+// Firebase Admin (v2 스타일)
+const { initializeApp } = require("firebase-admin/app");
+const { getFirestore } = require("firebase-admin/firestore");
 
-const db = admin.firestore();
+// Cloud Functions v2 (HTTP + 글로벌 옵션)
+const { onRequest } = require("firebase-functions/v2/https");
+const { setGlobalOptions } = require("firebase-functions/v2");
 
-// 🔥 Express 서버 생성 (⚠️ app.post 사용 전에 반드시 있어야 함!)
-const app = express();
-app.use(cors());
-app.use(express.json());
+// 🔹 서울 리전으로 글로벌 설정
+setGlobalOptions({
+  region: "asia-northeast3", // 서울
+});
 
-
-
+// 🔹 Firebase Admin 초기화
+initializeApp();
+initializeApp();
+const db = getFirestore();
 const reservationsRef = db.collection("reservations");
 const sitesRef = db.collection("sites");
 const inquiriesRef = db.collection("inquiries");
 const SECRET_KEY = process.env.TOSS_SECRET_KEY;
 const USE_FAKE_TOSS_CONFIRM = process.env.USE_FAKE_TOSS_CONFIRM === "true";
-const ADMIN_ALLOWED_STATUSES = [
-  "PENDING",
-  "PAID",
-  "CANCELED",
-  "NO_SHOW",
-  "REFUNDED",
-];
 
 const ensureSecretKey = () => {
   if (!SECRET_KEY) {
@@ -43,8 +34,10 @@ const ensureSecretKey = () => {
   }
 };
 
-const normalizePhone = (value) =>
-  String(value || "").replace(/[^0-9]/g, "");
+// 🔹 Express 앱 생성
+const app = express();
+app.use(cors({ origin: true }));
+app.use(express.json());
 
 const trimToNull = (value) => {
   if (typeof value !== "string") {
@@ -54,94 +47,8 @@ const trimToNull = (value) => {
   return trimmed || null;
 };
 
-const getKstDateString = (date = new Date()) => {
-  const offsetMs = 9 * 60 * 60 * 1000;
-  const kst = new Date(date.getTime() + offsetMs);
-  return kst.toISOString().slice(0, 10);
-};
-
-const getMonthRangeBounds = (value) => {
-  const [year, month] = value.split("-").map(Number);
-  if (!year || !month || month < 1 || month > 12) {
-    return null;
-  }
-  const start = `${year}-${String(month).padStart(2, "0")}-01`;
-  const lastDay = new Date(year, month, 0).getDate();
-  const end = `${year}-${String(month).padStart(2, "0")}-${String(lastDay).padStart(
-    2,
-    "0"
-  )}`;
-  return { start, end };
-};
-
-const getReservationAmount = (reservation) => {
-  const breakdown = reservation.amountBreakdown || {};
-  return (
-    breakdown.total ??
-    reservation.totalAmount ??
-    reservation.quickData?.totalAmount ??
-    0
-  );
-};
-
-const isValidDate = (value) => {
-  if (!value) return false;
-  const date = new Date(`${value}T00:00:00`);
-  return !Number.isNaN(date.getTime());
-};
-
-const formatDateRange = (dateString) => {
-  const date = new Date(`${dateString}T00:00:00`);
-  const year = date.getFullYear();
-  const month = date.getMonth() + 1;
-  const start = `${year}-${String(month).padStart(2, "0")}-01`;
-  const lastDay = new Date(year, month, 0).getDate();
-  const end = `${year}-${String(month).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
-  return { start, end };
-};
-
-const mapSiteDoc = (doc) => {
-  const data = doc.data() || {};
-  const normalized = {
-    id: doc.id,
-    siteId: data.siteId || doc.id,
-    name: data.name || "",
-    zone: data.zone || data.siteZone || "",
-    type: data.type || data.siteType || "",
-    baseAmount:
-      data.baseAmount ??
-      data.price ??
-      data.priceOffWeekday ??
-      0,
-    defaultPeople: data.defaultPeople ?? data.basePeople ?? null,
-    maxPeople: data.maxPeople ?? null,
-    isActive: typeof data.isActive === "boolean" ? data.isActive : true,
-    mainImageUrl:
-      data.mainImageUrl ||
-      data.squareImg ||
-      data.image ||
-      (Array.isArray(data.images) ? data.images[0] : "") ||
-      "",
-    descriptionShort: data.descriptionShort || "",
-    descriptionLong: data.descriptionLong || "",
-    galleryImageUrls: Array.isArray(data.galleryImageUrls)
-      ? data.galleryImageUrls
-      : Array.isArray(data.images)
-      ? data.images
-      : [],
-    extraPersonAmount: data.extraPerPerson ?? null,
-    carOption: data.carOption || "",
-    offWeekdayAmount: data.priceOffWeekday ?? null,
-    offWeekendAmount: data.priceOffWeekend ?? null,
-    peakWeekdayAmount: data.pricePeakWeekday ?? null,
-    peakWeekendAmount: data.pricePeakWeekend ?? null,
-    productDescription: data.productDescription || "",
-    noticeHighlight: data.noticeHighlight || "",
-    noticeLines: Array.isArray(data.noticeLines) ? data.noticeLines : [],
-    noticeHtml: data.noticeHtml || "",
-  };
-  return { ...data, ...normalized };
-};
+const normalizePhone = (value) =>
+  String(value || "").replace(/[^0-9]/g, "");
 
 const evaluatePreCheckFlags = (data = {}) => {
   const amountBreakdown = data.amountBreakdown || {};
@@ -155,9 +62,15 @@ const evaluatePreCheckFlags = (data = {}) => {
     amountBreakdown?.people ??
     0;
   const hasQaIssue = Object.values(qaValues).some(
-    (value) => value === false || value === "" || value === null || value === undefined
+    (value) =>
+      value === false ||
+      value === "" ||
+      value === null ||
+      value === undefined
   );
-  const hasAgreeIssue = Object.values(agreeValues).some((value) => value === false);
+  const hasAgreeIssue = Object.values(agreeValues).some(
+    (value) => value === false
+  );
   const hasRefund = cancel.status === "REQUESTED";
   const extraCharge = data.extraCharge ?? amountBreakdown.extraCharge ?? 0;
   return {
@@ -165,24 +78,24 @@ const evaluatePreCheckFlags = (data = {}) => {
       active: initialPeople > 0 && people > initialPeople,
       message:
         initialPeople > 0 && people > initialPeople
-          ? "기준 인원보다 많은 예약입니다."
+          ? "Guest count exceeds the initial number"
           : "",
     },
     onsite: {
       active: extraCharge > 0,
-      message: extraCharge > 0 ? "현장 결제(기타 수수료)가 있습니다." : "",
+      message: extraCharge > 0 ? "On-site extra charge applied" : "",
     },
     qa: {
       active: hasQaIssue,
-      message: hasQaIssue ? "질문 항목이 일부 미응답입니다." : "",
+      message: hasQaIssue ? "QA questions are incomplete" : "",
     },
     agree: {
       active: hasAgreeIssue,
-      message: hasAgreeIssue ? "약관 동의가 일부 미완료입니다." : "",
+      message: hasAgreeIssue ? "Some agreements are not accepted" : "",
     },
     refund: {
       active: hasRefund,
-      message: hasRefund ? "환불 요청 상태입니다." : "",
+      message: hasRefund ? "Refund requested" : "",
     },
   };
 };
@@ -233,19 +146,12 @@ const mapAdminReservation = (doc) => {
       requestedAt: data.cancelRequest?.requestedAt || null,
       adminNote: data.cancelRequest?.adminNote || null,
     },
-    adminNotes: data.adminNotes || [],
+    adminNotes: Array.isArray(data.adminNotes) ? data.adminNotes : [],
     preCheckFlags: evaluatePreCheckFlags(data),
     createdAt: data.createdAt || null,
-  };
+    updatedAt: data.updatedAt || null,
+    source: data.source || null,
 };
-
-const calcDaysBeforeCheckIn = (checkIn) => {
-  if (!checkIn) return null;
-  const now = new Date();
-  const checkInDate = new Date(`${checkIn}T00:00:00`);
-  const msPerDay = 24 * 60 * 60 * 1000;
-  const diffMs = checkInDate.getTime() - now.getTime();
-  return Math.floor(diffMs / msPerDay);
 };
 
 function generateReservationId() {
@@ -257,45 +163,6 @@ function generateReservationId() {
   }
   return prefix + random;
 }
-
-const parseISODate = (value) => {
-  if (!value) return null;
-  const date = new Date(`${value}T00:00:00`);
-  return Number.isNaN(date.getTime()) ? null : date;
-};
-
-const diffDays = (startISO, endISO) => {
-  const start = parseISODate(startISO);
-  const end = parseISODate(endISO);
-  if (!start || !end) {
-    return 0;
-  }
-  const delta = end.getTime() - start.getTime();
-  return Math.max(0, Math.round(delta / 86400000));
-};
-
-const padTwo = (value) => String(value).padStart(2, "0");
-
-const compareISO = (a, b) => {
-  const dateA = parseISODate(a);
-  const dateB = parseISODate(b);
-  if (!dateA || !dateB) return 0;
-  if (dateA.getTime() > dateB.getTime()) return 1;
-  if (dateA.getTime() < dateB.getTime()) return -1;
-  return 0;
-};
-
-const buildMonthRange = (year, month) => {
-  const y = Number(year);
-  const m = Number(month);
-  if (!Number.isFinite(y) || !Number.isFinite(m) || m < 1 || m > 12) {
-    return null;
-  }
-  const start = `${y}-${padTwo(m)}-01`;
-  const lastDay = new Date(y, m, 0).getDate();
-  const end = `${y}-${padTwo(m)}-${padTwo(lastDay)}`;
-  return { start, end, year: y, month: m };
-};
 
 const normalizeQa = (values = {}) => ({
   q1: Boolean(values.q1),
@@ -323,6 +190,22 @@ const normalizeUserInfo = (info = {}) => ({
   request: info?.request || "",
 });
 
+const parseISODate = (value) => {
+  if (!value) return null;
+  const date = new Date(`${value}T00:00:00`);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
+const diffDays = (startISO, endISO) => {
+  const start = parseISODate(startISO);
+  const end = parseISODate(endISO);
+  if (!start || !end) return 0;
+  const delta = end.getTime() - start.getTime();
+  return Math.max(0, Math.round(delta / 86400000));
+};
+
+const padTwo = (value) => String(value).padStart(2, "0");
+
 const buildNightDates = (checkIn, checkOut) => {
   const start = parseISODate(checkIn);
   const end = parseISODate(checkOut);
@@ -336,24 +219,70 @@ const buildNightDates = (checkIn, checkOut) => {
   return dates;
 };
 
-const asNumber = (value) => {
-  if (value == null) return 0;
-  const num = Number(value);
-  return Number.isFinite(num) ? num : 0;
-};
-
 const isWeekend = (date) => {
   const day = date.getDay();
   return day === 0 || day === 6;
 };
 
-const datesOverlap = (startA, endA, startB, endB) => {
-  const aStart = parseISODate(startA);
-  const aEnd = parseISODate(endA);
-  const bStart = parseISODate(startB);
-  const bEnd = parseISODate(endB);
-  if (!aStart || !aEnd || !bStart || !bEnd) return false;
-  return aStart < bEnd && bStart < aEnd;
+const getDayRate = (siteData, date) => {
+  if (!siteData) return 0;
+  if (isWeekend(date) && siteData?.weekendPrice != null) {
+    return asNumber(siteData.weekendPrice);
+  }
+  if (!isWeekend(date) && siteData?.weekdayPrice != null) {
+    return asNumber(siteData.weekdayPrice);
+  }
+  if (siteData?.basePrice != null) return asNumber(siteData.basePrice);
+  if (siteData?.price != null) return asNumber(siteData.price);
+  if (siteData?.rate != null) return asNumber(siteData.rate);
+  return 0;
+};
+
+const calculateTotalAmount = (
+  siteData,
+  checkIn,
+  checkOut,
+  people = 1,
+  manualExtra = 0
+) => {
+  const nights = diffDays(checkIn, checkOut);
+  if (nights < 1) return null;
+  const dates = buildNightDates(checkIn, checkOut);
+  const baseTotal = dates.reduce(
+    (sum, date) => sum + getDayRate(siteData, date),
+    0
+  );
+  const basePeople = Math.max(
+    1,
+    asNumber(
+      siteData?.basePeople ?? siteData?.minPeople ?? siteData?.includedPeople ?? 1
+    )
+  );
+  const peopleCount = Math.max(1, asNumber(people || basePeople));
+  const extraPersonPrice = Math.max(
+    0,
+    asNumber(
+      siteData?.extraPersonPrice ??
+        siteData?.extraPerPerson ??
+        siteData?.extraCharge ??
+        siteData?.extraFee
+    )
+  );
+  const extraPeople = Math.max(0, peopleCount - basePeople);
+  const extraPeopleTotal = extraPersonPrice * extraPeople * nights;
+  const manualExtraAmount = Math.max(0, asNumber(manualExtra));
+  const totalAmount = Math.max(
+    0,
+    Math.round(baseTotal + extraPeopleTotal + manualExtraAmount)
+  );
+  return {
+    amount: totalAmount,
+    nights,
+    peopleCount,
+    baseTotal,
+    extraTotal: extraPeopleTotal,
+    manualExtra: manualExtraAmount,
+  };
 };
 
 const BLOCKING_STATUSES = new Set(["paid", "confirmed"]);
@@ -391,70 +320,155 @@ const ensureNoPaidConflict = async (siteId, checkIn, checkOut) => {
   }
 };
 
-const getDayRate = (siteData, date) => {
-  if (!siteData) return 0;
-  if (isWeekend(date) && siteData?.weekendPrice != null) {
-    return asNumber(siteData.weekendPrice);
-  }
-  if (!isWeekend(date) && siteData?.weekdayPrice != null) {
-    return asNumber(siteData.weekdayPrice);
-  }
-  if (siteData?.basePrice != null) return asNumber(siteData.basePrice);
-  if (siteData?.price != null) return asNumber(siteData.price);
-  if (siteData?.rate != null) return asNumber(siteData.rate);
-  return 0;
-};
-
-const calculateTotalAmount = (
-  siteData,
-  checkIn,
-  checkOut,
-  people = 1,
-  manualExtra = 0
-) => {
-  const nights = diffDays(checkIn, checkOut);
-  if (nights < 1) return null;
-  const dates = buildNightDates(checkIn, checkOut);
-  const baseTotal = dates.reduce(
-    (sum, date) => sum + getDayRate(siteData, date),
-    0
-  );
-  const basePeople = Math.max(
-    1,
-    asNumber(siteData?.basePeople ?? siteData?.minPeople ?? siteData?.includedPeople ?? 1)
-  );
-  const peopleCount = Math.max(1, asNumber(people || basePeople));
-  const extraPersonPrice = Math.max(
-    0,
-    asNumber(
-      siteData?.extraPersonPrice ??
-        siteData?.extraPerPerson ??
-        siteData?.extraCharge ??
-        siteData?.extraFee
-    )
-  );
-  const extraPeople = Math.max(0, peopleCount - basePeople);
-  const extraPeopleTotal = extraPersonPrice * extraPeople * nights;
-  const manualExtraAmount = Math.max(0, asNumber(manualExtra));
-  const totalAmount = Math.max(0, Math.round(baseTotal + extraPeopleTotal));
-  return {
-    amount: totalAmount,
-    nights,
-    peopleCount,
-    baseTotal,
-    extraTotal: extraPeopleTotal,
-    manualExtra: manualExtraAmount,
-  };
-};
-
 const getSiteById = async (siteId) => {
   if (!siteId) return null;
   const snapshot = await sitesRef.doc(siteId).get();
   if (!snapshot.exists) return null;
   return { id: snapshot.id, ...snapshot.data() };
 };
+const mapSiteDoc = (doc) => {
+  const data = doc.data() || {};
+  const normalized = {
+    id: doc.id,
+    siteId: data.siteId || doc.id,
+    name: data.name || "",
+    zone: data.zone || data.siteZone || "",
+    type: data.type || data.siteType || "",
+    baseAmount:
+      data.baseAmount ?? data.price ?? data.priceOffWeekday ?? 0,
+    defaultPeople: data.defaultPeople ?? data.basePeople ?? null,
+    maxPeople: data.maxPeople ?? null,
+    isActive: typeof data.isActive === "boolean" ? data.isActive : true,
+    mainImageUrl:
+      data.mainImageUrl ||
+      data.squareImg ||
+      data.image ||
+      (Array.isArray(data.images) ? data.images[0] : "") ||
+      "",
+    descriptionShort: data.descriptionShort || "",
+    descriptionLong: data.descriptionLong || "",
+    galleryImageUrls: Array.isArray(data.galleryImageUrls)
+      ? data.galleryImageUrls
+      : Array.isArray(data.images)
+      ? data.images
+      : [],
+    extraPersonAmount: data.extraPerPerson ?? null,
+    carOption: data.carOption || "",
+    offWeekdayAmount: data.priceOffWeekday ?? null,
+    offWeekendAmount: data.priceOffWeekend ?? null,
+    peakWeekdayAmount: data.pricePeakWeekday ?? null,
+    peakWeekendAmount: data.pricePeakWeekend ?? null,
+    productDescription: data.productDescription || "",
+    noticeHighlight: data.noticeHighlight || "",
+    noticeLines: Array.isArray(data.noticeLines) ? data.noticeLines : [],
+    noticeHtml: data.noticeHtml || "",
+  };
+  return { ...data, ...normalized };
+};
 
-app.post("/api/payments/ready", async (req, res) => {
+const isValidDate = (value) => {
+  if (!value) return false;
+  const date = parseISODate(value);
+  return !!date;
+};
+
+const compareISO = (a, b) => {
+  const dateA = parseISODate(a);
+  const dateB = parseISODate(b);
+  if (!dateA || !dateB) return 0;
+  if (dateA.getTime() > dateB.getTime()) return 1;
+  if (dateA.getTime() < dateB.getTime()) return -1;
+  return 0;
+};
+
+const datesOverlap = (startA, endA, startB, endB) => {
+  const aStart = parseISODate(startA);
+  const aEnd = parseISODate(endA);
+  const bStart = parseISODate(startB);
+  const bEnd = parseISODate(endB);
+  if (!aStart || !aEnd || !bStart || !bEnd) return false;
+  return aStart < bEnd && bStart < aEnd;
+};
+
+const asNumber = (value) => {
+  if (value == null) return 0;
+  const num = Number(value);
+  return Number.isFinite(num) ? num : 0;
+};
+
+const getKstDateString = () => {
+  const offsetMs = 9 * 60 * 60 * 1000;
+  const kst = new Date(Date.now() + offsetMs);
+  return kst.toISOString().slice(0, 10);
+};
+
+const INTERNAL_TYPES = ["paid", "free", "manual"];
+const buildInternalAmountBreakdown = (totalAmount) => ({
+  baseAmount: totalAmount,
+  extraPersonAmount: 0,
+  manualExtra: 0,
+  extraCharge: 0,
+  total: totalAmount,
+});
+
+// 1) 헬스 체크: GET /health
+app.get("/health", (req, res) => {
+  res.json({
+    ok: true,
+    message: "Firebase Functions server (Seoul) is running",
+    region: "asia-northeast3",
+    time: new Date().toISOString(),
+  });
+});
+
+// 2) 사이트 목록: GET /sites
+app.get("/sites", async (req, res) => {
+  const limitParam = Number.parseInt(req.query.limit, 10);
+  const limit =
+    Number.isFinite(limitParam) && limitParam > 0 ? Math.min(limitParam, 50) : 0;
+  const startAfterId = req.query.startAfterId;
+
+  try {
+    let query = sitesRef.orderBy("id");
+    if (startAfterId) {
+      query = query.startAfter(startAfterId);
+    }
+    if (limit > 0) {
+      query = query.limit(limit + 1);
+    }
+
+    const snapshot = await query.get();
+    let docs = snapshot.docs;
+    let hasMore = false;
+    if (limit > 0 && docs.length > limit) {
+      hasMore = true;
+      docs = docs.slice(0, limit);
+    }
+
+    const sites = docs.map((doc) => {
+      const mapped = mapSiteDoc(doc);
+      return { ...mapped, id: doc.id };
+    });
+
+    const lastDoc = docs[docs.length - 1];
+    const nextStartAfter =
+      hasMore && lastDoc ? lastDoc.data()?.id || lastDoc.id : null;
+
+    return res.json({
+      ok: true,
+      sites,
+      items: sites,
+      hasMore,
+      nextStartAfter,
+    });
+  } catch (err) {
+    console.error("Error fetching sites:", err);
+    return res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// 결제 준비: POST /payments/ready
+app.post("/payments/ready", async (req, res) => {
   try {
     const {
       successUrl,
@@ -471,8 +485,6 @@ app.post("/api/payments/ready", async (req, res) => {
       qa = {},
       agree = {},
     } = req.body;
-
-    console.log("[/api/payments/ready req.body]", req.body);
 
     if (!successUrl || !failUrl || !siteId || !checkIn || !checkOut) {
       return res.status(400).json({
@@ -500,16 +512,16 @@ app.post("/api/payments/ready", async (req, res) => {
     );
 
     if (!calc) {
-      return res.status(400).json({ error: "Invalid checkIn / checkOut date range" });
+      return res
+        .status(400)
+        .json({ error: "Invalid checkIn / checkOut date range" });
     }
 
     const reservationId = generateReservationId();
     const orderId = reservationId;
     const amount = calc.amount;
     const orderName =
-      siteData?.name ||
-      siteData?.zone ||
-      `캠핑 예약 ${siteData?.id || siteId}`;
+      siteData?.name || siteData?.zone || `캠핑 예약 ${siteData?.id || siteId}`;
 
     const pendingRecord = {
       reservationId,
@@ -536,17 +548,7 @@ app.post("/api/payments/ready", async (req, res) => {
       updatedAt: new Date().toISOString(),
     };
 
-    // 🔥 pendingRecord 생성 직후 로그
-    console.log("[/ready] pendingRecord", pendingRecord);
-
-    // 🔥 Firestore에 저장 (단 1번만!)
     await reservationsRef.doc(reservationId).set(pendingRecord, { merge: true });
-
-    // 🔥 Firestore에 실제 저장된 내용 로그
-    const saved = await reservationsRef.doc(reservationId).get();
-    console.log("[/ready] savedRecord", saved.data());
-
-
 
     const payload = {
       orderId,
@@ -612,7 +614,8 @@ app.post("/api/payments/ready", async (req, res) => {
     });
   }
 });
-app.post("/api/payments/confirm", async (req, res) => {
+
+app.post("/payments/confirm", async (req, res) => {
   const {
     paymentKey,
     orderId,
@@ -627,17 +630,12 @@ app.post("/api/payments/confirm", async (req, res) => {
     agree = {},
   } = req.body;
 
-  console.log("[CONFIRM] body:", req.body);
-  console.log("[CONFIRM] orderId:", orderId, "paymentKey:", paymentKey);
-
   if (!paymentKey || !orderId) {
     return res.status(400).json({ error: "paymentKey and orderId required" });
   }
 
   try {
     const reservationId = orderId;
-
-    // 기존 예약 조회
     const snapshot = await reservationsRef.doc(reservationId).get();
     const existingReservation = snapshot.exists ? snapshot.data() : {};
 
@@ -648,24 +646,7 @@ app.post("/api/payments/confirm", async (req, res) => {
     const conflictSiteId =
       existingReservation.siteId || site?.id || siteId || quickData?.siteId;
 
-    // 이미 PAID 예약이 겹치는지 먼저 검사
-    try {
-      await ensureNoPaidConflict(conflictSiteId, pendingCheckIn, pendingCheckOut);
-    } catch (err) {
-      if (err.message === "ALREADY_RESERVED") {
-        console.warn(
-          "[RESERVE] already reserved:",
-          conflictSiteId,
-          pendingCheckIn,
-          pendingCheckOut
-        );
-        return res.status(409).json({
-          error: "ALREADY_RESERVED",
-          message: "해당 기간에는 이미 예약이 완료된 사이트입니다.",
-        });
-      }
-      throw err;
-    }
+    await ensureNoPaidConflict(conflictSiteId, pendingCheckIn, pendingCheckOut);
 
     ensureSecretKey();
 
@@ -679,7 +660,6 @@ app.post("/api/payments/confirm", async (req, res) => {
     const normalizedAgree = normalizeAgree(mergedAgree);
     const normalizedUserInfo = normalizeUserInfo(mergedUserInfo);
 
-    // 최종 체크인/체크아웃/인원/추가요금 결정
     const checkIn =
       existingReservation.checkIn || quickData?.checkIn || "";
     const checkOut =
@@ -692,10 +672,8 @@ app.post("/api/payments/confirm", async (req, res) => {
       1;
     const extraChargeValue =
       existingReservation.extraCharge ?? extraCharge ?? 0;
-
     const calculatedSiteId =
       existingReservation.siteId || site?.id || siteId || quickData?.siteId;
-
     const siteData = await getSiteById(calculatedSiteId);
 
     const amountCalc =
@@ -721,11 +699,8 @@ app.post("/api/payments/confirm", async (req, res) => {
       amount: finalAmount,
     };
 
-    // 🔹 Toss confirm 호출 (또는 Fake 모드)
     let tossRes;
-
     if (USE_FAKE_TOSS_CONFIRM) {
-      // 실제 Toss 확인 없이 바로 성공 처리
       tossRes = {
         status: "DONE",
         method: "CARD",
@@ -741,707 +716,70 @@ app.post("/api/payments/confirm", async (req, res) => {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Basic ${Buffer.from(`${SECRET_KEY}:`).toString("base64")}`,
+            Authorization: `Basic ${Buffer.from(`${SECRET_KEY}:`).toString(
+              "base64"
+            )}`,
           },
           body: JSON.stringify(payload),
         }
       );
 
-      const httpStatus = response.status;
       const rawText = await response.text();
-
       try {
         tossRes = rawText ? JSON.parse(rawText) : {};
       } catch (error) {
-        console.error("Toss confirm JSON parse error", error, rawText);
         return res.status(502).json({
           error: "Toss confirm response is not JSON",
-          status: httpStatus,
+          status: response.status,
           body: rawText,
         });
       }
 
       if (!response.ok) {
-        return res.status(httpStatus).json({
+        return res.status(response.status).json({
           error: tossRes.error || tossRes.message || "Toss confirm error",
           detail: tossRes,
         });
       }
     }
 
-    console.log(
-      "[CONFIRM] tossRes.status:",
-      tossRes.status,
-      "totalAmount:",
-      tossRes.totalAmount
-    );
-
-    // 동의/질문 응답 정리
-    const qaRecord = normalizedQa;
-    const agreeRecord = normalizedAgree;
-
-    const resolvedStatus =
-      tossRes?.status === "DONE" ? "PAID" : tossRes?.status || "PAID";
-
-    const nights =
-      amountCalc?.nights ??
-      existingReservation.nights ??
-      (checkIn && checkOut ? diffDays(checkIn, checkOut) : 0);
-
-    const baseAmount =
-      amountCalc?.baseTotal ?? existingReservation.baseAmount ?? 0;
-    const extraPersonAmount =
-      amountCalc?.extraTotal ?? existingReservation.extraPersonAmount ?? 0;
-    const manualExtraAmount =
-      amountCalc?.manualExtra ??
-      existingReservation.extraCharge ??
-      extraChargeValue;
-
-    const siteName =
-      siteData?.name ||
-      existingReservation.siteName ||
-      site?.name ||
-      "";
-    const siteTypeValue =
-      siteData?.type || existingReservation.siteType || site?.type || "";
-    const siteZoneValue =
-      siteData?.zone || existingReservation.siteZone || site?.zone || "";
-    const siteIdValue =
-      siteData?.id || existingReservation.siteId || site?.id || calculatedSiteId || "";
-
-    const paymentLog = {
-      paymentKey,
-      method: tossRes?.method || "CARD",
-      provider: tossRes?.easyPay?.provider || "",
-      easyPay: {
-        provider: tossRes?.easyPay?.provider || "",
-      },
-      requestedAt: tossRes?.requestedAt || "",
-      approvedAt: tossRes?.approvedAt || "",
-      receiptUrl: tossRes?.receipt?.url || "",
-    };
-
-    const record = {
-      reservationId,
-      siteId: siteIdValue,
-      siteName,
-      siteType: siteTypeValue,
-      siteZone: siteZoneValue,
-      people: peopleCount,
-      initialPeople:
-        quickData?.people ??
-        existingReservation.initialPeople ??
-        peopleCount,
-      checkIn: checkIn || "",
-      checkOut: checkOut || "",
-      nights,
+    const updates = {
+      status: "PAID",
+      amountBreakdown: amountCalc
+        ? {
+            baseAmount: amountCalc.baseTotal,
+            extraPersonAmount: amountCalc.extraTotal,
+            manualExtra: amountCalc.manualExtra,
+            extraCharge: extraChargeValue,
+            total: finalAmount,
+          }
+        : existingReservation.amountBreakdown || {},
       totalAmount: finalAmount,
-      baseAmount,
-      extraPersonAmount,
-      extraCharge: manualExtraAmount,
-      amountBreakdown: {
-        baseAmount,
-        extraPersonAmount,
-        manualExtra: manualExtraAmount,
-      },
-      userName:
-        normalizedUserInfo.name ||
-        existingReservation.userName ||
-        existingReservation.userInfo?.name ||
-        "",
-      userPhone:
-        normalizedUserInfo.phone ||
-        existingReservation.userPhone ||
-        existingReservation.userInfo?.phone ||
-        "",
-      userEmail:
-        normalizedUserInfo.email || existingReservation.userEmail || "",
-      request:
-        normalizedUserInfo.request ||
-        existingReservation.request ||
-        existingReservation.userInfo?.request ||
-        "",
-      status: resolvedStatus,
-      agree: agreeRecord,
-      qa: qaRecord,
-      payment: paymentLog,
-      quickData: quickData || existingReservation.quickData || {},
+      people: peopleCount,
+      extraCharge: extraChargeValue,
+      qa: normalizedQa,
+      agree: normalizedAgree,
       userInfo: normalizedUserInfo,
-      createdAt: existingReservation.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
 
-    try {
-      await reservationsRef.doc(reservationId).set(record, { merge: true });
-      console.log("[CONFIRM] saved reservation:", reservationId);
-    } catch (err) {
-      console.error(
-      
-        "[CONFIRM] failed to save reservation:",
-        reservationId,
-        err
-      );
-      return res.status(500).json({
-        error: "FAILED_TO_SAVE_RESERVATION",
-        detail: err.message,
-      });
-    }
+    await reservationsRef.doc(reservationId).set(updates, { merge: true });
 
-    return res.json({ success: true, reservationId, record, payment: paymentLog });
+    return res.json({
+      ok: true,
+      payment: tossRes,
+      totalAmount: finalAmount,
+    });
   } catch (err) {
     console.error("Toss confirm error", err);
-    return res.status(502).json({
+    return res.status(err.status || 502).json({
       error: err.message || "Payment confirmation failed",
-      detail: err.detail || null,
     });
   }
 });
 
-app.get("/api/sites", async (req, res) => {
-  const limitParam = parseInt(req.query.limit, 10);
-  const limit = Number.isFinite(limitParam) && limitParam > 0 ? Math.min(limitParam, 50) : 0;
-  const startAfterId = req.query.startAfterId;
-
-  try {
-    let query = sitesRef.orderBy("id");
-    if (startAfterId) {
-      query = query.startAfter(startAfterId);
-    }
-    if (limit > 0) {
-      query = query.limit(limit + 1);
-    }
-
-    const snapshot = await query.get();
-    let docs = snapshot.docs;
-    let hasMore = false;
-    if (limit > 0 && docs.length > limit) {
-      hasMore = true;
-      docs = docs.slice(0, limit);
-    }
-
-    const sites = docs.map((doc) => {
-      const data = doc.data() || {};
-      const normalized = { id: doc.id, ...data };
-      if (data?.id && data.id !== doc.id) {
-        normalized.sourceId = data.id;
-      }
-      const mapped = mapSiteDoc(doc);
-      normalized.mainImageUrl = mapped.mainImageUrl;
-      normalized.productDescription = mapped.productDescription;
-      normalized.galleryImageUrls = mapped.galleryImageUrls;
-      normalized.noticeHighlight = mapped.noticeHighlight;
-      normalized.noticeLines = mapped.noticeLines;
-      normalized.noticeHtml = mapped.noticeHtml;
-      return normalized;
-    });
-
-    const lastDoc = docs[docs.length - 1];
-    const nextStartAfter =
-      hasMore && lastDoc
-        ? lastDoc.data()?.id || lastDoc.id
-        : null;
-
-    return res.json({
-      sites,
-      hasMore,
-      nextStartAfter,
-    });
-  } catch (err) {
-    console.error("[SITES] list error:", err);
-    return res.status(500).json({ error: "FAILED_TO_FETCH_SITES" });
-  }
-});
-
-app.get("/api/reservations/availability", async (req, res) => {
-  const { siteId, checkIn, checkOut } = req.query;
-  if (!siteId || !checkIn || !checkOut) {
-    return res
-      .status(400)
-      .json({ error: "siteId, checkIn, checkOut required" });
-  }
-
-  try {
-    const conflict = await hasPaidConflict(siteId, checkIn, checkOut);
-    return res.json({
-      siteId,
-      checkIn,
-      checkOut,
-      available: !conflict,
-      conflict,
-    });
-  } catch (err) {
-    console.error("[AVAILABILITY] error:", err);
-    return res
-      .status(500)
-      .json({ error: "FAILED_TO_CHECK_AVAILABILITY" });
-  }
-});
-
-app.get("/api/reservations/disabled-dates", async (req, res) => {
-  const { siteId, year, month } = req.query;
-  if (!siteId || !year || !month) {
-    return res
-      .status(400)
-      .json({ error: "siteId, year, month required" });
-  }
-  const range = buildMonthRange(year, month);
-  if (!range) {
-    return res.status(400).json({ error: "Invalid year or month" });
-  }
-
-  try {
-    const snapshot = await reservationsRef
-      .where("siteId", "==", siteId)
-      .get();
-    const disabledCheckInDates = new Set();
-    snapshot.forEach((doc) => {
-      const data = doc.data();
-      if (!isReservationBlockingForAvailability(data)) {
-        return;
-      }
-      if (data?.checkIn) {
-        if (
-          compareISO(data.checkIn, range.start) >= 0 &&
-          compareISO(data.checkIn, range.end) <= 0
-        ) {
-          disabledCheckInDates.add(data.checkIn);
-        }
-      }
-    });
-    return res.json({
-      siteId,
-      year: range.year,
-      month: range.month,
-      disabledCheckInDates: Array.from(disabledCheckInDates).sort(),
-    });
-  } catch (err) {
-    console.error("[DISABLED-DATES] error:", err);
-    return res
-      .status(500)
-      .json({ error: "FAILED_TO_FETCH_DISABLED_DATES" });
-  }
-});
-
-app.get("/api/reservations/check-availability", async (req, res) => {
-  const { siteId, checkIn, checkOut } = req.query;
-  if (!siteId || !checkIn || !checkOut) {
-    return res
-      .status(400)
-      .json({ error: "siteId, checkIn, checkOut are required" });
-  }
-
-  if (!isValidDate(checkIn) || !isValidDate(checkOut)) {
-    return res.status(400).json({ error: "Invalid date format" });
-  }
-  const startDate = parseISODate(checkIn);
-  const endDate = parseISODate(checkOut);
-  if (!startDate || !endDate || startDate >= endDate) {
-    return res
-      .status(400)
-      .json({ error: "checkIn must be before checkOut" });
-  }
-
-  try {
-    const snapshot = await reservationsRef
-      .where("siteId", "==", siteId)
-      .get();
-    const conflicts = [];
-    snapshot.forEach((doc) => {
-      const data = doc.data() || {};
-      if (!isReservationBlockingForAvailability(data)) {
-        return;
-      }
-      if (!data.checkIn || !data.checkOut) {
-        return;
-      }
-      const existingStart = parseISODate(data.checkIn);
-      const existingEnd = parseISODate(data.checkOut);
-      if (!existingStart || !existingEnd) {
-        return;
-      }
-      if (!(endDate <= existingStart || existingEnd <= startDate)) {
-        conflicts.push({
-          id: doc.id,
-          siteId: data.siteId,
-          checkIn: data.checkIn,
-          checkOut: data.checkOut,
-          source: data.source || "user",
-          status: data.status || null,
-        });
-      }
-    });
-
-    if (conflicts.length === 0) {
-      return res.json({
-        available: true,
-        conflicts: 0,
-      });
-    }
-
-    return res.json({
-      available: false,
-      conflicts: conflicts.length,
-      reason: "OVERLAP",
-      examples: conflicts.slice(0, 2).map((item) => ({
-        siteId: item.siteId,
-        checkIn: item.checkIn,
-        checkOut: item.checkOut,
-        source: item.source,
-        status: item.status,
-      })),
-    });
-  } catch (err) {
-    console.error("[AVAILABILITY CHECK] error:", err);
-    return res.status(500).json({ error: "Internal server error" });
-  }
-});
-app.get("/api/reservations/search", async (req, res) => {
-  try {
-    const { name = "", phone = "", reservationId = "" } = req.query;
-    const snapshot = await reservationsRef.get();
-    const normalizedSearchPhone = normalizePhone(phone);
-    const matches = [];
-
-    snapshot.forEach((doc) => {
-      const data = doc.data();
-      const matchesId = reservationId
-        ? doc.id.toLowerCase().includes(reservationId.toLowerCase())
-        : true;
-      const matchesName = name
-        ? String(data.userName || "").toLowerCase().includes(name.toLowerCase())
-        : true;
-      const matchesPhone = normalizedSearchPhone
-        ? normalizePhone(data.userPhone).includes(normalizedSearchPhone)
-        : true;
-
-      if (matchesId && matchesName && matchesPhone) {
-        matches.push({ reservationId: doc.id, ...data });
-      }
-    });
-
-    return res.json(matches);
-  } catch (err) {
-    console.error("reservation search error", err);
-    return res.status(500).json({ error: "Failed to search reservations" });
-  }
-});
-
-app.post("/api/reservations/lookup", async (req, res) => {
-  try {
-    const { reservationId, phone } = req.body || {};
-    if (!reservationId || !phone) {
-      return res.status(400).json({ error: "RESERVATION_ID_AND_PHONE_REQUIRED" });
-    }
-
-    const normalizedInput = normalizePhone(phone);
-    if (!normalizedInput) {
-      return res.status(400).json({ error: "INVALID_PHONE" });
-    }
-
-    const docRef = reservationsRef.doc(reservationId);
-    const snap = await docRef.get();
-    if (!snap.exists) {
-      return res.status(404).json({ error: "NOT_FOUND" });
-    }
-
-    const data = snap.data() || {};
-    const savedPhone = data.userInfo?.phone || data.userPhone || "";
-    const normalizedSaved = normalizePhone(savedPhone);
-
-    if (!normalizedSaved || normalizedSaved !== normalizedInput) {
-      return res.status(403).json({ error: "PHONE_MISMATCH" });
-    }
-
-    return res.json({
-      reservationId: docRef.id,
-      reservation: { reservationId: docRef.id, ...data },
-    });
-  } catch (err) {
-    console.error("[POST /api/reservations/lookup] error:", err);
-    return res.status(500).json({ error: "LOOKUP_FAILED" });
-  }
-});
-
-app.get("/api/reservations/:reservationId", async (req, res) => {
-  const { reservationId } = req.params;
-  if (!reservationId) {
-    return res.status(400).json({ error: "reservationId required" });
-  }
-
-  console.log("[GET /api/reservations] reservationId:", reservationId);
-
-  try {
-    const snapshot = await reservationsRef
-      .where("reservationId", "==", reservationId)
-      .limit(1)
-      .get();
-
-    if (snapshot.empty) {
-      console.warn("[GET /api/reservations] not found:", reservationId);
-      return res.status(404).json({ error: "NOT_FOUND" });
-    }
-
-    const doc = snapshot.docs[0];
-    const data = doc.data();
-    return res.json(data);
-  } catch (err) {
-    console.error("[GET /api/reservations] error for:", reservationId, err);
-    return res.status(500).json({ error: "INTERNAL_ERROR" });
-  }
-});
-
-// ===== 환불/취소 요청 API (기록만, 실제 환불 X) =====
-app.post("/api/inquiries", async (req, res) => {
-  try {
-    const { name, phone, email, message } = req.body || {};
-    if (!name || !phone || !message) {
-      return res.status(400).json({ error: "MISSING_INQUIRY_FIELDS" });
-    }
-    const nowIso = new Date().toISOString();
-    const docRef = db.collection("inquiries").doc();
-    await docRef.set({
-      name,
-      phone,
-      email: email || "",
-      message,
-      status: "OPEN",
-      adminNote: "",
-      updatedAt: nowIso,
-      createdAt: nowIso,
-      source: "web",
-    });
-    return res.status(201).json({ ok: true, inquiryId: docRef.id });
-  } catch (err) {
-    console.error("[POST /api/inquiries] error", err);
-    return res.status(500).json({ error: "INTERNAL_ERROR" });
-  }
-});
-
-app.get("/api/admin/inquiries", async (req, res) => {
-  try {
-    const { status, from, to } = req.query;
-    let query = inquiriesRef.orderBy("createdAt", "desc");
-    if (status) {
-      query = query.where("status", "==", status);
-    }
-    if (from) {
-      query = query.where("createdAt", ">=", from);
-    }
-    if (to) {
-      query = query.where("createdAt", "<=", to);
-    }
-    const snapshot = await query.get();
-    const items = snapshot.docs.map((doc) => {
-      const data = doc.data() || {};
-      return {
-        id: doc.id,
-        name: data.name || null,
-        phone: data.phone || null,
-        message: data.message || null,
-        status: data.status || "OPEN",
-        createdAt: data.createdAt || null,
-        updatedAt: data.updatedAt || null,
-        adminNote: data.adminNote || null,
-      };
-    });
-    return res.json({ items });
-  } catch (err) {
-    console.error("[GET /api/admin/inquiries] error", err);
-    return res.status(500).json({ error: "FAILED_TO_FETCH_INQUIRIES" });
-  }
-});
-
-app.post("/api/admin/inquiries/update", async (req, res) => {
-  const { id, status, adminNote } = req.body || {};
-  if (!id) {
-    return res.status(400).json({ error: "Inquiry id is required" });
-  }
-  try {
-    const docRef = inquiriesRef.doc(id);
-    const snap = await docRef.get();
-    if (!snap.exists) {
-      return res.status(404).json({ error: "Inquiry not found" });
-    }
-    const payload = { updatedAt: new Date().toISOString() };
-    if (status) payload.status = status;
-    if (adminNote !== undefined) payload.adminNote = adminNote;
-    await docRef.set(payload, { merge: true });
-    const updated = await docRef.get();
-    const data = updated.data() || {};
-    return res.json({
-      ok: true,
-      inquiry: {
-        id: updated.id,
-        name: data.name || null,
-        phone: data.phone || null,
-        message: data.message || null,
-        status: data.status || "OPEN",
-        createdAt: data.createdAt || null,
-        updatedAt: data.updatedAt || null,
-        adminNote: data.adminNote || null,
-      },
-    });
-  } catch (err) {
-    console.error("[POST /api/admin/inquiries/update] error", err);
-    return res.status(500).json({ error: "FAILED_TO_UPDATE_INQUIRY" });
-  }
-});
-
-app.post("/api/refunds", async (req, res) => {
-  try {
-    const { reservationId, phone, reason, causeType = "GUEST" } = req.body;
-
-    if (!reservationId || !phone) {
-      return res.status(400).json({ error: "MISSING_PARAMS" });
-    }
-
-    const docRef = db.collection("reservations").doc(reservationId);
-    const snap = await docRef.get();
-
-    if (!snap.exists) {
-      return res.status(404).json({ error: "RESERVATION_NOT_FOUND" });
-    }
-
-    const data = snap.data();
-
-    const savedPhone =
-      data.userInfo?.phone || data.userPhone || data.phone || "";
-    if (!savedPhone) {
-      return res.status(400).json({ error: "MISSING_SAVED_PHONE" });
-    }
-
-    const normalizedSaved = normalizePhone(savedPhone);
-    const normalizedInput = normalizePhone(phone);
-
-    if (!normalizedSaved || normalizedSaved !== normalizedInput) {
-      return res.status(403).json({ error: "PHONE_MISMATCH" });
-    }
-
-    if (data.status !== "PAID") {
-      return res.status(400).json({
-        error: "NOT_REFUNDABLE_STATUS",
-        status: data.status,
-      });
-    }
-
-    const checkIn = data.checkIn;
-    if (!checkIn) {
-      return res.status(400).json({ error: "MISSING_CHECKIN" });
-    }
-
-    const daysBefore = calcDaysBeforeCheckIn(checkIn);
-    const nowIso = new Date().toISOString();
-
-    await docRef.set(
-      {
-        cancelRequest: {
-          requestedAt: nowIso,
-          reason: reason || "",
-          causeType,
-          daysBeforeCheckIn: daysBefore,
-          status: "REQUESTED",
-        },
-      },
-      { merge: true }
-    );
-
-    const updated = (await docRef.get()).data();
-
-    return res.json({
-      ok: true,
-      reservation: updated,
-    });
-  } catch (err) {
-    console.error("[POST /api/refunds] error", err);
-    return res.status(500).json({ error: "INTERNAL_ERROR" });
-  }
-});
-
-app.get("/api/health", (req, res) => res.json({ ok: true }));
-
-app.get("/api/admin/refund-requests", async (req, res) => {
-  try {
-    const snapshot = await reservationsRef
-      .where("status", "==", "PAID")
-      .where("cancelRequest.status", "==", "REQUESTED")
-      .get();
-      const list = snapshot.docs.map((doc) => {
-        const data = doc.data() || {};
-        const cancel = data.cancelRequest || {};
-        const userInfo = data.userInfo || {};
-        const breakdown = {
-          baseAmount:
-            data.amountBreakdown?.baseAmount ??
-            data.baseAmount ??
-            data.totalAmount ??
-            null,
-          totalAmount:
-            data.amountBreakdown?.totalAmount ??
-            data.totalAmount ??
-            data.baseAmount ??
-            null,
-        };
-        return {
-          reservationId: doc.id,
-          userName: userInfo.name || data.userName || null,
-          userPhone: normalizePhone(userInfo.phone || data.phone || ""),
-          siteId: data.siteId || (data.site && data.site.id) || null,
-          siteName: data.siteName || (data.site && data.site.name) || null,
-          zone:
-            data.siteZone ||
-            data.zone ||
-            (data.site && data.site.zone) ||
-            null,
-          checkIn: data.checkIn || null,
-          checkOut: data.checkOut || null,
-          people: data.people ?? data.guests ?? null,
-          amount: data.totalAmount ?? data.baseAmount ?? null,
-          amountBreakdown: breakdown,
-          reason: cancel.reason || null,
-          requestedAt: cancel.requestedAt || null,
-          daysBeforeCheckIn:
-            cancel.daysBeforeCheckIn !== undefined
-              ? cancel.daysBeforeCheckIn
-              : null,
-        };
-      });
-    return res.json(list);
-  } catch (err) {
-    console.error("[/api/admin/refund-requests] error", err);
-    return res
-      .status(500)
-      .json({ error: "FAILED_TO_FETCH_REFUND_REQUESTS" });
-  }
-});
-
-app.post("/api/admin/refund-requests/update", async (req, res) => {
-  const { reservationId, status, adminNote = "" } = req.body || {};
-  if (!reservationId || !status) {
-    return res
-      .status(400)
-      .json({ error: "reservationId and status are required" });
-  }
-  try {
-    await reservationsRef.doc(reservationId).set(
-      {
-        cancelRequest: {
-          status,
-          adminNote,
-          updatedAt: new Date().toISOString(),
-        },
-      },
-      { merge: true }
-    );
-    return res.json({ ok: true });
-  } catch (err) {
-    console.error("[/api/admin/refund-requests/update] error", err);
-    return res
-      .status(500)
-      .json({ error: "FAILED_TO_UPDATE_REFUND_REQUEST" });
-  }
-});
-
-app.get("/api/admin/reservations", async (req, res) => {
+// 관리자 예약 목록: GET /admin/reservations
+app.get("/admin/reservations", async (req, res) => {
   try {
     let query = reservationsRef;
     const { checkInStart, checkInEnd, siteId, name, phone, status } = req.query;
@@ -1479,39 +817,67 @@ app.get("/api/admin/reservations", async (req, res) => {
 
     const snapshot = await query.get();
     const normalizedFilterPhone = normalizePhone(phone);
-    let filtered = snapshot.docs
+    const filtered = snapshot.docs
       .map(mapAdminReservation)
       .filter((item) => {
-        if (name && !String(item.userInfo?.name || item.userName || "")
-          .toLowerCase()
-          .includes(name.toLowerCase())) {
+        if (
+          name &&
+          !String(item.userInfo?.name || item.userName || "")
+            .toLowerCase()
+            .includes(name.toLowerCase())
+        ) {
           return false;
         }
-        if (phone && normalizePhone(item.userInfo?.phone || item.phone || "")
-          .indexOf(normalizedFilterPhone) === -1) {
+        if (
+          phone &&
+          normalizePhone(item.userInfo?.phone || item.phone || "").indexOf(
+            normalizedFilterPhone
+          ) === -1
+        ) {
           return false;
         }
         return true;
       });
     return res.json({ reservations: filtered });
   } catch (err) {
-    console.error("[/api/admin/reservations] error", err);
+    console.error("[/admin/reservations] error", err);
     return res
       .status(500)
       .json({ error: "FAILED_TO_FETCH_RESERVATIONS", detail: err.message });
   }
 });
 
-app.get("/api/admin/reservations/today", async (req, res) => {
+// 예약 상세: GET /reservations/:reservationId
+app.get("/reservations/:reservationId", async (req, res) => {
+  const { reservationId } = req.params;
+  if (!reservationId) {
+    return res.status(400).json({ error: "reservationId required" });
+  }
+  try {
+    const snapshot = await reservationsRef
+      .where("reservationId", "==", reservationId)
+      .limit(1)
+      .get();
+    if (snapshot.empty) {
+      return res.status(404).json({ error: "NOT_FOUND" });
+    }
+    const doc = snapshot.docs[0];
+    return res.json(doc.data());
+  } catch (err) {
+    console.error("[GET /reservations] error for:", reservationId, err);
+    return res.status(500).json({ error: "INTERNAL_ERROR" });
+  }
+});
+
+// 관리자 오늘 일정: GET /admin/reservations/today
+app.get("/admin/reservations/today", async (req, res) => {
   try {
     const targetDate = req.query.date || getKstDateString();
     const snapshot = await reservationsRef
       .where("status", "==", "PAID")
       .get();
     const allPaid = snapshot.docs.map(mapAdminReservation);
-    const checkInToday = allPaid.filter(
-      (item) => item.checkIn === targetDate
-    );
+    const checkInToday = allPaid.filter((item) => item.checkIn === targetDate);
     const checkOutToday = allPaid.filter(
       (item) => item.checkOut === targetDate
     );
@@ -1521,7 +887,7 @@ app.get("/api/admin/reservations/today", async (req, res) => {
         item.checkOut &&
         item.checkIn < targetDate &&
         item.checkOut > targetDate
-      );
+    );
     return res.json({
       date: targetDate,
       checkInToday,
@@ -1529,202 +895,89 @@ app.get("/api/admin/reservations/today", async (req, res) => {
       inHouseToday,
     });
   } catch (err) {
-    console.error("[/api/admin/reservations/today] error", err);
-    return res.status(500).json({ error: "FAILED_TO_FETCH_TODAY_RESERVATIONS" });
-  }
-});
-
-app.get("/api/admin/stats/summary", async (req, res) => {
-  const today = getKstDateString();
-  const defaultMonth = formatDateRange(today);
-  const fromParam = req.query.from || defaultMonth.start;
-  const toParam = req.query.to || defaultMonth.end;
-
-  if (!isValidDate(fromParam) || !isValidDate(toParam)) {
-    return res.status(400).json({ error: "INVALID_RANGE" });
-  }
-  if (new Date(`${fromParam}T00:00:00`) > new Date(`${toParam}T23:59:59`)) {
-    return res.status(400).json({ error: "INVALID_RANGE" });
-  }
-
-  try {
-    const paidSnapshot = await reservationsRef
-      .where("status", "==", "PAID")
-      .get();
-    const paidReservations = paidSnapshot.docs
-      .map(mapAdminReservation)
-      .filter(
-        (reservation) =>
-          reservation.checkIn &&
-          reservation.checkIn >= fromParam &&
-          reservation.checkIn <= toParam
-      );
-
-    const todaySnapshot = await reservationsRef
-      .where("status", "==", "PAID")
-      .get();
-    const todayReservations = todaySnapshot.docs.map(mapAdminReservation);
-
-    const topSitesMap = new Map();
-    paidReservations.forEach((reservation) => {
-      const key = reservation.siteId || "미정";
-      const count = topSitesMap.get(key) ?? { count: 0, siteName: reservation.siteName };
-      topSitesMap.set(key, {
-        count: count.count + 1,
-        siteName: reservation.siteName || count.siteName,
-      });
-    });
-
-    const topSites = Array.from(topSitesMap.entries())
-      .map(([siteId, info]) => ({
-        siteId,
-        siteName: info.siteName,
-        count: info.count,
-      }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 3);
-
-    const recentRefundSnapshot = await reservationsRef
-      .where("cancelRequest.status", "==", "REQUESTED")
-      .get();
-    const recentRefunds = recentRefundSnapshot.docs.map((doc) => {
-      const data = doc.data() || {};
-      return {
-        reservationId: doc.id,
-        siteId: data.siteId || null,
-        siteName: data.siteName || null,
-        checkIn: data.checkIn || null,
-        status: data.cancelRequest?.status || null,
-        reason: data.cancelRequest?.reason || null,
-        requestedAt: data.cancelRequest?.requestedAt || null,
-      };
-    });
-    recentRefunds.sort((a, b) => {
-      if (!a.requestedAt || !b.requestedAt) return 0;
-      return new Date(b.requestedAt) - new Date(a.requestedAt);
-    });
-    const topRecentRefunds = recentRefunds.slice(0, 5);
-
-    const todayStats = {
-      date: today,
-      checkInCount: todayReservations.filter((r) => r.checkIn === today).length,
-      checkOutCount: todayReservations.filter((r) => r.checkOut === today).length,
-      inHouseCount: todayReservations.filter(
-        (r) => r.checkIn && r.checkOut && r.checkIn <= today && r.checkOut > today
-      ).length,
-      paidAmount: todayReservations
-        .filter((r) => r.checkIn === today)
-        .reduce((sum, r) => sum + getReservationAmount(r), 0),
-      refundAmount: todayReservations
-        .filter((r) => r.cancelRequest?.status === "COMPLETED")
-        .reduce((sum, r) => sum + getReservationAmount(r), 0),
-    };
-
-    const monthStats = {
-      reservationCount: paidReservations.length,
-      cancelCount: paidReservations.filter((r) => r.cancelRequest?.status === "COMPLETED").length,
-      paidAmount: paidReservations.reduce((sum, r) => sum + getReservationAmount(r), 0),
-      refundAmount: paidReservations
-        .filter((r) => r.cancelRequest?.status === "COMPLETED")
-        .reduce((sum, r) => sum + getReservationAmount(r), 0),
-    };
-
-    return res.json({
-      range: { from: fromParam, to: toParam },
-      today: todayStats,
-      month: monthStats,
-      topSites,
-      recentRefunds: topRecentRefunds,
-    });
-  } catch (err) {
-    console.error("[/api/admin/stats/summary] error", err);
-    return res.status(500).json({ error: "STATS_SUMMARY_FAILED" });
-  }
-});
-
-app.post("/api/admin/reservations/update-status", async (req, res) => {
-  const { reservationId, status } = req.body || {};
-  if (!reservationId || !status) {
-    return res
-      .status(400)
-      .json({ error: "reservationId and status are required" });
-  }
-  if (!ADMIN_ALLOWED_STATUSES.includes(status)) {
-    return res.status(400).json({ error: "Invalid status value" });
-  }
-  try {
-    const docRef = reservationsRef.doc(reservationId);
-    const doc = await docRef.get();
-    if (!doc.exists) {
-      return res.status(404).json({ error: "Reservation not found" });
-    }
-    const now = new Date().toISOString();
-    const historyEntry = {
-      status,
-      at: now,
-      by: "ADMIN_PANEL",
-    };
-    await docRef.update({
-      status,
-      updatedAt: now,
-      statusHistory: admin.firestore.FieldValue.arrayUnion(historyEntry),
-    });
-    const updatedDoc = await docRef.get();
-    return res.json({
-      ok: true,
-      reservation: { reservationId: updatedDoc.id, ...updatedDoc.data() },
-    });
-  } catch (err) {
-    console.error("[/api/admin/reservations/update-status] error", err);
+    console.error("[/admin/reservations/today] error", err);
     return res
       .status(500)
-      .json({ error: "FAILED_TO_UPDATE_RESERVATION_STATUS" });
+      .json({ error: "FAILED_TO_FETCH_TODAY_RESERVATIONS" });
   }
 });
 
-app.post("/api/admin/reservations/add-note", async (req, res) => {
-  const { reservationId, note, operator = "admin" } = req.body || {};
-  if (!reservationId || !note) {
-    return res
-      .status(400)
-      .json({ error: "reservationId and note are required" });
-  }
+// 관리자 통계 요약: GET /admin/stats/summary
+app.get("/admin/stats/summary", async (req, res) => {
   try {
-    const docRef = reservationsRef.doc(reservationId);
-    const doc = await docRef.get();
-    if (!doc.exists) {
-      return res.status(404).json({ error: "Reservation not found" });
+    const { from, to } = req.query;
+
+    if (!from || !to) {
+      return res.status(400).json({ error: "MISSING_DATE_RANGE" });
     }
-    const now = new Date().toISOString();
-    const noteEntry = {
-      note,
-      operator,
-      at: now,
+
+    const startDate = new Date(`${from}T00:00:00`);
+    const endDate = new Date(`${to}T23:59:59`);
+
+    if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
+      return res.status(400).json({ error: "INVALID_DATE_RANGE" });
+    }
+
+    if (startDate > endDate) {
+      return res.status(400).json({ error: "INVALID_DATE_RANGE" });
+    }
+
+    const snap = await reservationsRef
+      .where("checkIn", ">=", from)
+      .where("checkIn", "<=", to)
+      .get();
+
+    const reservations = snap.docs.map(mapAdminReservation);
+
+    const summary = {
+      totalReservations: reservations.length,
+      checkInToday: 0,
+      checkOutToday: 0,
+      totalAmount: 0,
+      refundAmount: 0,
+      refundCount: 0,
+      onlineAmount: 0,
     };
-    await docRef.update({
-      adminNotes: admin.firestore.FieldValue.arrayUnion(noteEntry),
+
+    reservations.forEach((r) => {
+      const total = r.amountBreakdown?.total ?? 0;
+      const canceled = r.cancelRequest?.status === "REQUESTED";
+      summary.totalAmount += total;
+      if (canceled) {
+        summary.refundAmount += total;
+        summary.refundCount += 1;
+      }
     });
-    const updatedDoc = await docRef.get();
+
     return res.json({
       ok: true,
-      reservation: { reservationId: updatedDoc.id, ...updatedDoc.data() },
+      range: { from, to },
+      summary,
+      reservations,
     });
   } catch (err) {
-    console.error("[/api/admin/reservations/add-note] error", err);
-    return res.status(500).json({ error: "FAILED_TO_ADD_RESERVATION_NOTE" });
+    console.error("[/admin/stats/summary] error:", err);
+    return res.status(500).json({
+      error: "FAILED_TO_FETCH_STATS",
+      detail: err.message,
+    });
   }
 });
 
-const INTERNAL_TYPES = ["paid", "free", "manual"];
-const buildInternalAmountBreakdown = (totalAmount) => ({
-  baseAmount: totalAmount,
-  extraPersonAmount: 0,
-  manualExtra: 0,
-  extraCharge: 0,
-  total: totalAmount,
+// 관리자 사이트 목록: GET /admin/sites
+app.get("/admin/sites", async (req, res) => {
+  try {
+    const snapshot = await sitesRef.get();
+    const sites = snapshot.docs.map(mapSiteDoc);
+    return res.json({ sites });
+  } catch (err) {
+    console.error("[/admin/sites] error", err);
+    return res.status(500).json({ error: "ADMIN_SITES_FETCH_FAILED" });
+  }
 });
 
-app.post("/api/admin/internal-reservations", async (req, res) => {
+// 관리자 내부 예약: POST /admin/internal-reservations
+app.post("/admin/internal-reservations", async (req, res) => {
   const {
     siteId,
     checkIn,
@@ -1800,14 +1053,15 @@ app.post("/api/admin/internal-reservations", async (req, res) => {
       ...docData,
     });
   } catch (err) {
-    console.error("[/api/admin/internal-reservations] create error", err);
+    console.error("[/admin/internal-reservations] create error", err);
     return res
       .status(500)
       .json({ error: "INTERNAL_RESERVATION_CREATE_FAILED" });
   }
 });
 
-app.get("/api/admin/internal-reservations", async (req, res) => {
+// 관리자 내부 예약 목록: GET /admin/internal-reservations
+app.get("/admin/internal-reservations", async (req, res) => {
   const { siteId, type, adminName, from, to } = req.query || {};
   if (from && !isValidDate(from)) {
     return res.status(400).json({ error: "INVALID_FROM_DATE" });
@@ -1854,14 +1108,15 @@ app.get("/api/admin/internal-reservations", async (req, res) => {
       });
     return res.json(results);
   } catch (err) {
-    console.error("[/api/admin/internal-reservations] list error", err);
+    console.error("[/admin/internal-reservations] list error", err);
     return res
       .status(500)
       .json({ error: "INTERNAL_RESERVATION_LIST_FAILED" });
   }
 });
 
-app.put("/api/admin/internal-reservations/:id", async (req, res) => {
+// 관리자 내부 예약 수정: PUT /admin/internal-reservations/:id
+app.put("/admin/internal-reservations/:id", async (req, res) => {
   const { id } = req.params;
   const body = req.body || {};
   try {
@@ -1882,7 +1137,8 @@ app.put("/api/admin/internal-reservations/:id", async (req, res) => {
       if (
         !isValidDate(newCheckIn) ||
         !isValidDate(newCheckOut) ||
-        new Date(`${newCheckIn}T00:00:00`) >= new Date(`${newCheckOut}T00:00:00`)
+        new Date(`${newCheckIn}T00:00:00`) >=
+          new Date(`${newCheckOut}T00:00:00`)
       ) {
         return res.status(400).json({ error: "INVALID_DATE_RANGE" });
       }
@@ -1928,9 +1184,7 @@ app.put("/api/admin/internal-reservations/:id", async (req, res) => {
     if (body.adminName != null) {
       const normalized = (body.adminName || "").trim();
       if (!normalized) {
-        return res
-          .status(400)
-          .json({ error: "ADMIN_NAME_REQUIRED" });
+        return res.status(400).json({ error: "ADMIN_NAME_REQUIRED" });
       }
       const existingAdminInfo = existing.adminInfo || {};
       updates.adminInfo = {
@@ -1956,14 +1210,15 @@ app.put("/api/admin/internal-reservations/:id", async (req, res) => {
     const refreshed = await docRef.get();
     return res.json({ id: refreshed.id, ...refreshed.data() });
   } catch (err) {
-    console.error("[/api/admin/internal-reservations/:id] update error", err);
+    console.error("[/admin/internal-reservations/:id] update error", err);
     return res
       .status(500)
       .json({ error: "INTERNAL_RESERVATION_UPDATE_FAILED" });
   }
 });
 
-app.delete("/api/admin/internal-reservations/:id", async (req, res) => {
+// 관리자 내부 예약 삭제: DELETE /admin/internal-reservations/:id
+app.delete("/admin/internal-reservations/:id", async (req, res) => {
   const { id } = req.params;
   try {
     const docRef = reservationsRef.doc(id);
@@ -1981,92 +1236,104 @@ app.delete("/api/admin/internal-reservations/:id", async (req, res) => {
     });
     return res.json({ success: true });
   } catch (err) {
-    console.error("[/api/admin/internal-reservations/:id] delete error", err);
+    console.error("[/admin/internal-reservations/:id] delete error", err);
     return res
       .status(500)
       .json({ error: "INTERNAL_RESERVATION_DELETE_FAILED" });
   }
 });
 
-app.get("/api/admin/sites", async (req, res) => {
+// 관리자 환불 요청: GET /admin/refund-requests
+app.get("/admin/refund-requests", async (req, res) => {
   try {
-    const snapshot = await sitesRef.get();
-    const sites = snapshot.docs.map(mapSiteDoc);
-    return res.json({ sites });
-  } catch (err) {
-    console.error("[/api/admin/sites] error", err);
-    return res.status(500).json({ error: "ADMIN_SITES_FETCH_FAILED" });
-  }
-});
-
-app.get("/api/admin/sites/:id", async (req, res) => {
-  try {
-    const doc = await sitesRef.doc(req.params.id).get();
-    if (!doc.exists) {
-      return res.status(404).json({ error: "NOT_FOUND" });
-    }
-    return res.json({ site: mapSiteDoc(doc) });
-  } catch (err) {
-    console.error("[/api/admin/sites/:id] error", err);
-    return res.status(500).json({ error: "ADMIN_SITE_DETAIL_FAILED" });
-  }
-});
-
-app.post("/api/admin/sites/update", async (req, res) => {
-  try {
-    const payload = req.body || {};
-    if (!payload.id) {
-      return res.status(400).json({ error: "MISSING_ID" });
-    }
-    const docRef = sitesRef.doc(payload.id);
-    const existing = await docRef.get();
-    if (!existing.exists) {
-      return res.status(404).json({ error: "NOT_FOUND" });
-    }
-    const fieldMap = {
-      name: "name",
-      zone: "zone",
-      type: "type",
-      baseAmount: "baseAmount",
-      defaultPeople: "defaultPeople",
-      maxPeople: "maxPeople",
-      isActive: "isActive",
-      descriptionShort: "descriptionShort",
-      descriptionLong: "descriptionLong",
-      mainImageUrl: "mainImageUrl",
-      galleryImageUrls: "galleryImageUrls",
-      extraPersonAmount: "extraPerPerson",
-      offWeekdayAmount: "priceOffWeekday",
-      offWeekendAmount: "priceOffWeekend",
-      peakWeekdayAmount: "pricePeakWeekday",
-      peakWeekendAmount: "pricePeakWeekend",
-      carOption: "carOption",
-      productDescription: "productDescription",
-      noticeHighlight: "noticeHighlight",
-      noticeLines: "noticeLines",
-      noticeHtml: "noticeHtml",
-    };
-    const updates = { updatedAt: new Date().toISOString() };
-    Object.entries(fieldMap).forEach(([payloadKey, docKey]) => {
-      if (payload[payloadKey] !== undefined) {
-        if (payloadKey === "galleryImageUrls") {
-          updates[docKey] = Array.isArray(payload[payloadKey])
-            ? payload[payloadKey]
-            : [];
-        } else {
-          updates[docKey] = payload[payloadKey];
-        }
-      }
+    const snapshot = await reservationsRef
+      .where("status", "==", "PAID")
+      .where("cancelRequest.status", "==", "REQUESTED")
+      .get();
+    const list = snapshot.docs.map((doc) => {
+      const data = doc.data() || {};
+      const cancel = data.cancelRequest || {};
+      const userInfo = data.userInfo || {};
+      const breakdown = {
+        baseAmount:
+          data.amountBreakdown?.baseAmount ??
+          data.baseAmount ??
+          data.totalAmount ??
+          null,
+        totalAmount:
+          data.amountBreakdown?.totalAmount ??
+          data.totalAmount ??
+          data.baseAmount ??
+          null,
+      };
+      return {
+        reservationId: doc.id,
+        userName: userInfo.name || data.userName || null,
+        userPhone: normalizePhone(userInfo.phone || data.phone || ""),
+        siteId: data.siteId || (data.site && data.site.id) || null,
+        siteName: data.siteName || (data.site && data.site.name) || null,
+        zone:
+          data.siteZone ||
+          data.zone ||
+          (data.site && data.site.zone) ||
+          null,
+        checkIn: data.checkIn || null,
+        checkOut: data.checkOut || null,
+        people: data.people ?? data.guests ?? null,
+        amount: data.totalAmount ?? data.baseAmount ?? null,
+        amountBreakdown: breakdown,
+        reason: cancel.reason || null,
+        requestedAt: cancel.requestedAt || null,
+        daysBeforeCheckIn:
+          cancel.daysBeforeCheckIn !== undefined
+            ? cancel.daysBeforeCheckIn
+            : null,
+      };
     });
-    await docRef.set(updates, { merge: true });
-    const updated = await docRef.get();
-    return res.json({ site: mapSiteDoc(updated) });
+    return res.json(list);
   } catch (err) {
-    console.error("[/api/admin/sites/update] error", err);
-    return res.status(500).json({ error: "ADMIN_SITE_UPDATE_FAILED" });
+    console.error("[/admin/refund-requests] error", err);
+    return res
+      .status(500)
+      .json({ error: "FAILED_TO_FETCH_REFUND_REQUESTS" });
   }
 });
 
-functions.setGlobalOptions({ region: "asia-northeast3" });
+// 관리자 문의 목록: GET /admin/inquiries
+app.get("/admin/inquiries", async (req, res) => {
+  try {
+    const { status, from, to } = req.query;
+    let query = inquiriesRef.orderBy("createdAt", "desc");
+    if (status) {
+      query = query.where("status", "==", status);
+    }
+    if (from) {
+      query = query.where("createdAt", ">=", from);
+    }
+    if (to) {
+      query = query.where("createdAt", "<=", to);
+    }
+    const snapshot = await query.get();
+    const items = snapshot.docs.map((doc) => {
+      const data = doc.data() || {};
+      return {
+        id: doc.id,
+        name: data.name || null,
+        phone: data.phone || null,
+        message: data.message || null,
+        status: data.status || "OPEN",
+        createdAt: data.createdAt || null,
+        updatedAt: data.updatedAt || null,
+        adminNote: data.adminNote || null,
+      };
+    });
+    return res.json({ items });
+  } catch (err) {
+    console.error("[/admin/inquiries] error", err);
+    return res.status(500).json({ error: "FAILED_TO_FETCH_INQUIRIES" });
+  }
+});
 
-exports.api = functions.https.onRequest(app);
+
+// 🔹 Cloud Functions v2 HTTP 트리거로 export
+exports.api = onRequest(app);

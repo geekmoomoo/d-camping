@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+﻿import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import CalendarGrid from "../components/CalendarGrid";
 import {
   compareISO,
@@ -8,7 +8,7 @@ import {
   toISO,
 } from "../utils/date";
 import { getSites } from "../services/siteService";
-
+import { API_BASE } from "../config/api";
 
 const parseSiteIdParts = (siteIdValue) => {
   const text = String(siteIdValue || "").trim().toUpperCase();
@@ -44,7 +44,6 @@ function SiteSelectStep({ data, onChangeFilter, onSelectSite }) {
   const [checkIn, setCheckIn] = useState(initialCheckIn);
   const [checkOut, setCheckOut] = useState(initialCheckOut);
   const [people, setPeople] = useState(initialPeople);
-
   const [isDateSheetOpen, setIsDateSheetOpen] = useState(false);
   const [isPeopleSheetOpen, setIsPeopleSheetOpen] = useState(false);
 
@@ -57,7 +56,6 @@ function SiteSelectStep({ data, onChangeFilter, onSelectSite }) {
 
   const [calYear, setCalYear] = useState(today.getFullYear());
   const [calMonth, setCalMonth] = useState(today.getMonth());
-
   const selectingCheckOut = !!checkIn && !checkOut;
 
   const rangeText =
@@ -114,7 +112,6 @@ function SiteSelectStep({ data, onChangeFilter, onSelectSite }) {
     if (!iso) return;
 
     const todayISO = toISO(today);
-
     if (!selectingCheckOut) {
       if (
         compareISO(iso, todayISO) < 0 ||
@@ -154,16 +151,13 @@ function SiteSelectStep({ data, onChangeFilter, onSelectSite }) {
   const [siteCursor, setSiteCursor] = useState(null);
   const [siteHasMore, setSiteHasMore] = useState(false);
   const [siteLoading, setSiteLoading] = useState(false);
+  const [hasLoadedFirstPage, setHasLoadedFirstPage] = useState(false);
   const gridWrapperRef = useRef(null);
   const SITE_PAGE_LIMIT = 10;
 
   const loadSites = useCallback(async ({ append = false } = {}) => {
-    if (siteLoading) {
-      return;
-    }
-    if (append && !siteCursor) {
-      return;
-    }
+    if (siteLoading) return;
+    if (append && !siteCursor) return;
     setSiteLoading(true);
     try {
       const options = { limit: SITE_PAGE_LIMIT };
@@ -171,13 +165,18 @@ function SiteSelectStep({ data, onChangeFilter, onSelectSite }) {
         options.startAfterId = siteCursor;
       }
       const payload = await getSites(options);
-      const nextSites = payload?.sites || [];
+      const nextSites = Array.isArray(payload)
+        ? payload
+        : payload?.sites || payload?.items || [];
       setSiteList((prev) => {
         const combined = append ? [...prev, ...nextSites] : nextSites;
         return sortSitesById(combined);
       });
       setSiteCursor(payload?.nextStartAfter || null);
       setSiteHasMore(Boolean(payload?.hasMore));
+      if (!hasLoadedFirstPage) {
+        setHasLoadedFirstPage(true);
+      }
     } catch (err) {
       console.error("[SiteSelectStep] loadSites error", err);
       if (!append) {
@@ -188,16 +187,19 @@ function SiteSelectStep({ data, onChangeFilter, onSelectSite }) {
     }
   }, [siteCursor, siteLoading]);
 
+  const initialLoadRef = useRef(false);
   useEffect(() => {
+    if (initialLoadRef.current) return;
+    initialLoadRef.current = true;
     loadSites();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
+  }, [loadSites]);
   const sentinelRef = useRef(null);
 
   useEffect(() => {
     const sentinel = sentinelRef.current;
-    if (!sentinel || !siteHasMore) return undefined;
-
+    if (!hasLoadedFirstPage || !sentinel || !siteHasMore) {
+      return undefined;
+    }
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -213,10 +215,8 @@ function SiteSelectStep({ data, onChangeFilter, onSelectSite }) {
       }
     );
     observer.observe(sentinel);
-    return () => {
-      observer.disconnect();
-    };
-  }, [siteHasMore, siteLoading, loadSites]);
+    return () => observer.disconnect();
+  }, [hasLoadedFirstPage, siteHasMore, siteLoading, loadSites, siteList.length]);
 
   const monthLabel = `${calYear}년 ${calMonth + 1}월`;
   const firstDay = new Date(calYear, calMonth, 1);
@@ -282,7 +282,7 @@ function SiteSelectStep({ data, onChangeFilter, onSelectSite }) {
               checkOut,
             });
             const response = await fetch(
-              `/api/reservations/availability?${params.toString()}`,
+              `${API_BASE}/reservations/availability?${params.toString()}`,
               { signal: controller.signal }
             );
             if (!response.ok) {
@@ -307,97 +307,99 @@ function SiteSelectStep({ data, onChangeFilter, onSelectSite }) {
       active = false;
       controller.abort();
     };
-  }, [
-    checkIn,
-    checkOut,
-    filteredSiteIds.join(","),
-  ]);
+  }, [checkIn, checkOut, filteredSiteIds.join(",")]);
 
   return (
     <section className="dc-step-card dc-site-select-card">
       <div className="dc-site-grid-wrapper" ref={gridWrapperRef}>
         <div className="dc-site-grid">
-          {filteredSites.map((site) => (
-            <div className="dc-site-card" key={site.id}>
-            <div className="dc-site-thumb-wrap">
-              <img
-                className="dc-site-thumb"
-                src={site.squareImg}
-                alt={site.name}
-                loading="lazy"
-              />
+          {filteredSites.length === 0 ? (
+            <div className="dc-site-empty">
+              <p>표시할 사이트가 없습니다.</p>
             </div>
-            <div className="dc-site-body">
-              {(() => {
-                let typeClass = "type-default";
-                let typeText = "";
-                if (site.type === "self-caravan") {
-                  typeClass = "type-self-caravan";
-                  typeText = "자가 카라반";
-                } else if (site.type === "cabana-deck") {
-                  typeClass = "type-cabana-deck";
-                  typeText = "카바나 데크";
-                } else if (site.type === "tent") {
-                  typeClass = "type-tent";
-                  typeText = "텐트 사이트";
-                } else if (site.type === "lodging") {
-                  typeClass = "type-lodging";
-                  typeText = "숙박 시설";
-                }
-
-                return (
-                  <>
-                    <div className={`dc-site-type-tag ${typeClass}`}>
-                      {typeText}
-                    </div>
-                    <div className="dc-site-label">
-                      {site.zone} 구역 / {site.carOption}
-                    </div>
-                    <div className="dc-site-capacity">기준 4인 / 최대 5인</div>
-                  </>
-                );
-              })()}
-
-              <div className="dc-site-meta-row">
-                <div className="dc-site-left" />
-                <div className="dc-site-right">
-                  <div className="dc-site-meta-info">
-                    {siteAvailability[site.id] === false ? (
-                      <span className="dc-site-remain dc-site-unavailable">
-                        해당 날짜 예약완료
-                      </span>
-                    ) : (
-                      <>
-                        <span className="dc-site-remain">예약 가능</span>
-                        <span
-                          className="dc-site-divider"
-                          aria-hidden="true"
-                        >
-                          |
-                        </span>
-                        <span className="dc-site-price">
-                          {site.price.toLocaleString()}원
-                        </span>
-                      </>
-                    )}
-                  </div>
-                  <button
-                    type="button"
-                    className="dc-site-book-btn"
-                    onClick={() => onSelectSite(site)}
-                  >
-                    예약하기
-                  </button>
+          ) : (
+            filteredSites.map((site) => (
+              <div className="dc-site-card" key={site.id}>
+                <div className="dc-site-thumb-wrap">
+                  <img
+                    className="dc-site-thumb"
+                    src={site.squareImg}
+                    alt={site.name}
+                    loading="lazy"
+                  />
                 </div>
+                <div className="dc-site-body">
+                  {(() => {
+                    let typeClass = "type-default";
+                    let typeText = "";
+                    if (site.type === "self-caravan") {
+                      typeClass = "type-self-caravan";
+                      typeText = "자가 카라반";
+                    } else if (site.type === "cabana-deck") {
+                      typeClass = "type-cabana-deck";
+                      typeText = "카바나 데크";
+                    } else if (site.type === "tent") {
+                      typeClass = "type-tent";
+                      typeText = "텐트 사이트";
+                    } else if (site.type === "lodging") {
+                      typeClass = "type-lodging";
+                      typeText = "숙박 시설";
+                    }
+
+                    return (
+                      <>
+                        <div className={`dc-site-type-tag ${typeClass}`}>
+                          {typeText}
+                        </div>
+                        <div className="dc-site-label">
+                          {site.zone} 구역 / {site.carOption}
+                        </div>
+                        <div className="dc-site-capacity">기준 4인 / 최대 5인</div>
+                      </>
+                    );
+                  })()}
+
+                  <div className="dc-site-meta-row">
+                    <div className="dc-site-left" />
+                    <div className="dc-site-right">
+                      <div className="dc-site-meta-info">
+                        {siteAvailability[site.id] === false ? (
+                          <span className="dc-site-remain dc-site-unavailable">
+                            해당 날짜 예약완료
+                          </span>
+                        ) : (
+                          <>
+                            <span className="dc-site-remain">예약 가능</span>
+                            <span
+                              className="dc-site-divider"
+                              aria-hidden="true"
+                            >
+                              |
+                            </span>
+                            <span className="dc-site-price">
+                              {site.price?.toLocaleString()}원
+                            </span>
+                          </>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        className="dc-site-book-btn"
+                        onClick={() => onSelectSite(site)}
+                      >
+                        예약하기
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
         <div ref={sentinelRef} className="dc-site-sentinel" aria-hidden="true" />
       </div>
 
-    <div className="dc-fixed-filter-bar">
+      <div className="dc-fixed-filter-bar">
         <button
           type="button"
           className="dc-fixed-filter-btn"
@@ -517,10 +519,3 @@ function SiteSelectStep({ data, onChangeFilter, onSelectSite }) {
 }
 
 export default SiteSelectStep;
-
-
-
-
-
-
-

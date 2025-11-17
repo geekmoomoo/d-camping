@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { diffDays, formatDateLabel, toISO } from "../utils/date";
 import TermsModal from "../components/TermsModal";
+import { API_BASE } from "../config/api";
 
 const OPTION_PRICE = 5000;
 const TERM_DETAILS = [
@@ -280,7 +281,7 @@ function ConfirmReservePage({ quickData, site, onProceed }) {
           checkOut,
         });
         const response = await fetch(
-          `/api/reservations/availability?${params.toString()}`,
+          `${API_BASE}/reservations/availability?${params.toString()}`,
           { signal: controller.signal }
         );
         if (!response.ok) {

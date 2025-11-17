@@ -1,9 +1,13 @@
+import { API_BASE } from "../config/api";
+
 export async function fetchInquiries({ status, from, to } = {}) {
   const params = new URLSearchParams();
   if (status) params.append("status", status);
   if (from) params.append("from", from);
   if (to) params.append("to", to);
-  const response = await fetch(`/api/admin/inquiries${params.toString() ? `?${params.toString()}` : ""}`);
+  const response = await fetch(
+    `${API_BASE}/admin/inquiries${params.toString() ? `?${params.toString()}` : ""}`
+  );
   if (!response.ok) {
     const err = await response.json().catch(() => null);
     throw new Error(err?.error || "Failed to load inquiries.");
@@ -12,7 +16,7 @@ export async function fetchInquiries({ status, from, to } = {}) {
 }
 
 export async function updateInquiry({ id, status, adminNote }) {
-  const response = await fetch("/api/admin/inquiries/update", {
+  const response = await fetch(`${API_BASE}/admin/inquiries/update`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ id, status, adminNote }),

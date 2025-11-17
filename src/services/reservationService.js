@@ -1,3 +1,5 @@
+import { API_BASE } from "../config/api";
+
 /**
  * @typedef {Object} ReservationSearchCriteria
  * @property {string} name
@@ -10,9 +12,12 @@ export async function searchReservations(criteria) {
   if (criteria?.name) params.append("name", criteria.name);
   if (criteria?.phone) params.append("phone", criteria.phone);
   if (criteria?.reservationId) params.append("reservationId", criteria.reservationId);
-  const response = await fetch(`/api/reservations/search?${params.toString()}`, {
-    headers: { "Content-Type": "application/json" },
-  });
+  const response = await fetch(
+    `${API_BASE}/reservations/search?${params.toString()}`,
+    {
+      headers: { "Content-Type": "application/json" },
+    }
+  );
   if (!response.ok) {
     throw new Error("Failed to search reservations.");
   }
@@ -20,7 +25,7 @@ export async function searchReservations(criteria) {
 }
 
 export async function lookupReservation({ reservationId, phone }) {
-  const response = await fetch(`/api/reservations/lookup`, {
+  const response = await fetch(`${API_BASE}/reservations/lookup`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ reservationId, phone }),
@@ -32,7 +37,7 @@ export async function lookupReservation({ reservationId, phone }) {
 }
 
 export async function requestRefund(payload) {
-  const response = await fetch("/api/refunds", {
+  const response = await fetch(`${API_BASE}/refunds`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -54,7 +59,7 @@ export async function requestCancel(payload) {
 }
 
 export async function submitInquiry(payload) {
-  const response = await fetch("/api/inquiries", {
+  const response = await fetch(`${API_BASE}/inquiries`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),

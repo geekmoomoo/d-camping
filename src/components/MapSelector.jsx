@@ -138,7 +138,10 @@ function MapSelector({ onNext }) {
     let active = true;
     getSites().then((payload) => {
       if (!active) return;
-      setSiteDetails(payload?.sites || []);
+      const nextSites = Array.isArray(payload)
+        ? payload
+        : payload?.sites || payload?.items || [];
+      setSiteDetails(nextSites);
     });
     return () => {
       active = false;

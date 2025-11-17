@@ -1,3 +1,7 @@
+import { API_BASE } from "../config/api";
+
+const ADMIN_BASE = `${API_BASE}/admin`;
+
 export async function fetchReservations(filters = {}) {
   const params = new URLSearchParams();
   Object.entries(filters).forEach(([key, value]) => {
@@ -9,7 +13,7 @@ export async function fetchReservations(filters = {}) {
 
   const query = params.toString();
   const response = await fetch(
-    `/api/admin/reservations${query ? `?${query}` : ""}`,
+    `${ADMIN_BASE}/reservations${query ? `?${query}` : ""}`,
     {
       headers: { "Content-Type": "application/json" },
     }
@@ -23,7 +27,7 @@ export async function fetchReservations(filters = {}) {
 
 export async function fetchTodayReservations(date) {
   const params = date ? `?date=${encodeURIComponent(date)}` : "";
-  const response = await fetch(`/api/admin/reservations/today${params}`, {
+  const response = await fetch(`${ADMIN_BASE}/reservations/today${params}`, {
     method: "GET",
     headers: { "Content-Type": "application/json" },
   });
@@ -48,7 +52,9 @@ export async function fetchAdminStatsSummary({ from, to } = {}) {
   if (from) params.append("from", from);
   if (to) params.append("to", to);
   const query = params.toString();
-  const response = await fetch(`/api/admin/stats/summary${query ? `?${query}` : ""}`);
+  const response = await fetch(
+    `${ADMIN_BASE}/stats/summary${query ? `?${query}` : ""}`
+  );
   if (!response.ok) {
     const err = await response.json().catch(() => null);
     throw new Error(err?.error || "Failed to load dashboard stats.");
@@ -57,7 +63,7 @@ export async function fetchAdminStatsSummary({ from, to } = {}) {
 }
 
 export async function updateReservationStatus(reservationId, status) {
-  const res = await fetch("/api/admin/reservations/update-status", {
+  const res = await fetch(`${ADMIN_BASE}/reservations/update-status`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ reservationId, status }),
@@ -72,7 +78,7 @@ export async function updateReservationStatus(reservationId, status) {
 }
 
 export async function addReservationNote(reservationId, note, operator) {
-  const res = await fetch("/api/admin/reservations/add-note", {
+  const res = await fetch(`${ADMIN_BASE}/reservations/add-note`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ reservationId, note, operator }),

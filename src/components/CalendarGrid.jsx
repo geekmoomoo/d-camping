@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { compareISO, formatDateLabel, parseISO, toISO } from "../utils/date";
+import { API_BASE } from "../config/api";
 
 function CalendarGrid({
   cells,
@@ -45,7 +46,7 @@ function CalendarGrid({
     const fetchDisabledDates = async () => {
       try {
         const response = await fetch(
-          `/api/reservations/disabled-dates?${params.toString()}`,
+          `${API_BASE}/reservations/disabled-dates?${params.toString()}`,
           { signal: controller.signal }
         );
         if (!response.ok) throw new Error("disabled dates unavailable");

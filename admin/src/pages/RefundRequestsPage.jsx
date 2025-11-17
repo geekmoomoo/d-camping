@@ -1,4 +1,5 @@
 ﻿import React, { useEffect, useState } from "react";
+import { API_BASE } from "../config/api";
 import RefundRequestDetailPage from "./RefundRequestDetailPage.jsx";
 
 const formatDate = (value) => {
@@ -33,7 +34,7 @@ export default function RefundRequestsPage() {
   const loadRefunds = () => {
     setLoading(true);
     setError("");
-    fetch("/api/admin/refund-requests")
+    fetch(`${API_BASE}/admin/refund-requests`)
       .then((res) => {
         if (!res.ok) throw new Error("환불 요청을 불러오지 못했습니다.");
         return res.json();

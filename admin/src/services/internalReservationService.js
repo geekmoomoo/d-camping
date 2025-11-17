@@ -1,4 +1,6 @@
-const INTERNAL_PATH = "/api/admin/internal-reservations";
+import { API_BASE } from "../config/api";
+
+const INTERNAL_PATH = `${API_BASE}/admin/internal-reservations`;
 
 async function handleResponse(response) {
   if (response.ok) {

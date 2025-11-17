@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
+import { API_BASE } from "../config/api";
 
 function formatAmount(value) {
   if (value == null || Number.isNaN(Number(value))) return "-";
@@ -26,7 +27,7 @@ function PaymentSuccessPage({ onReservationBack, onHome }) {
     setError("");
     try {
       const response = await fetch(
-        `/api/reservations/${encodeURIComponent(orderId)}`
+        `${API_BASE}/reservations/${encodeURIComponent(orderId)}`
       );
       if (!response.ok) {
         throw new Error("예약 정보를 불러오는 데 실패했습니다.");
@@ -81,7 +82,7 @@ function PaymentSuccessPage({ onReservationBack, onHome }) {
       setConfirmLoading(true);
       setConfirmError("");
       try {
-        const response = await fetch("/api/payments/confirm", {
+      const response = await fetch(`${API_BASE}/payments/confirm`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),

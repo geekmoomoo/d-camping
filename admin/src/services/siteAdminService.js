@@ -1,5 +1,7 @@
+import { API_BASE } from "../config/api";
+
 export async function fetchAdminSites() {
-  const response = await fetch("/api/admin/sites");
+  const response = await fetch(`${API_BASE}/admin/sites`);
   if (!response.ok) {
     const err = await response.json().catch(() => null);
     console.error("[fetchAdminSites] failed", err);
@@ -10,7 +12,7 @@ export async function fetchAdminSites() {
 }
 
 export async function fetchAdminSiteDetail(id) {
-  const response = await fetch(`/api/admin/sites/${id}`);
+  const response = await fetch(`${API_BASE}/admin/sites/${id}`);
   if (!response.ok) {
     const err = await response.json().catch(() => null);
     console.error("[fetchAdminSiteDetail] failed", err);
@@ -21,7 +23,7 @@ export async function fetchAdminSiteDetail(id) {
 }
 
 export async function updateAdminSite(payload) {
-  const response = await fetch("/api/admin/sites/update", {
+  const response = await fetch(`${API_BASE}/admin/sites/update`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),

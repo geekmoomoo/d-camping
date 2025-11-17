@@ -1,5 +1,7 @@
 ﻿import React, { useMemo, useState } from "react";
 
+import { API_BASE } from "../config/api";
+
 const formatDate = (value) => {
   if (!value) return "-";
   const date = new Date(value);
@@ -59,7 +61,7 @@ export default function RefundRequestDetailPage({
     setIsSubmitting(true);
     setMessage("");
     try {
-      const res = await fetch("/api/admin/refund-requests/update", {
+      const res = await fetch(`${API_BASE}/admin/refund-requests/update`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
