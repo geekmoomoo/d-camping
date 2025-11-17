@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { diffDays, formatDateLabel, toISO } from "../utils/date";
+import { API_BASE } from "../config/api";
 
 const PENDING_KEY = "dcamp.pendingReservation";
 
@@ -71,7 +72,7 @@ function PaymentConfirmPage({
       persistPending();
       setIsLoading(true);
       setErrorMessage("");
-      const response = await fetch("/api/payments/ready", {
+      const response = await fetch(`${API_BASE}/payments/ready`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -130,11 +131,11 @@ function PaymentConfirmPage({
           siteId: site.id,
           checkIn,
           checkOut,
-        });
-        const response = await fetch(
-          `/api/reservations/availability?${params.toString()}`,
-          { signal: controller.signal }
-        );
+          });
+          const response = await fetch(
+            `${API_BASE}/reservations/availability?${params.toString()}`,
+            { signal: controller.signal }
+          );
         if (!response.ok) {
           throw new Error("예약 가능 여부를 확인할 수 없습니다.");
         }
