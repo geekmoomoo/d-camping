@@ -1,20 +1,16 @@
-import express from "express";
-import cors from "cors";
-import dotenv from "dotenv";
-import fetch from "node-fetch";
-import admin from "firebase-admin";
-import { readFileSync } from "fs";
-
-const rootEnvPath = new URL("../.env", import.meta.url);
+const express = require("express");
+const cors = require("cors");
+const dotenv = require("dotenv");
+const admin = require("firebase-admin");
+const functions = require("firebase-functions");
+const path = require("path");
+const rootEnvPath = path.resolve(__dirname, "..", ".env");
 dotenv.config({ path: rootEnvPath });
-dotenv.config({ path: new URL("./.env", import.meta.url), override: true });
+dotenv.config({ path: path.resolve(__dirname, ".env"), override: true });
 
-
-// 🔥 Firebase Admin 초기화
+// Firebase Admin 초기화
 if (!admin.apps.length) {
-  admin.initializeApp({
-    projectId: "damyang-camping",
-  });
+  admin.initializeApp();
 }
 
 const db = admin.firestore();
@@ -2071,7 +2067,6 @@ app.post("/api/admin/sites/update", async (req, res) => {
   }
 });
 
-const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => {
-  console.log(`Payments proxy running on http://localhost:${PORT}`);
-});
+functions.setGlobalOptions({ region: "asia-northeast3" });
+
+exports.api = functions.https.onRequest(app);

@@ -1,4 +1,4 @@
-﻿import React from "react";
+import React from "react";
 
 const MENU_ITEMS = [
   { id: "dashboard", label: "대시보드" },
@@ -6,6 +6,7 @@ const MENU_ITEMS = [
   { id: "siteStatus", label: "사이트 현황" },
   { id: "siteManage", label: "사이트 관리" },
   { id: "reservationList", label: "전체 예약" },
+  { id: "internalReservations", label: "내부 예약 관리" },
   { id: "refunds", label: "환불 요청" },
   { id: "inquiries", label: "문의" },
 ];

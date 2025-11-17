@@ -8,6 +8,7 @@ import ReservationListPage from "./pages/ReservationListPage.jsx";
 import ReservationDetailPage from "./pages/ReservationDetailPage.jsx";
 import SiteStatusPage from "./pages/SiteStatusPage.jsx";
 import SiteManagePage from "./pages/SiteManagePage.jsx";
+import AdminInternalReservationsPage from "./pages/AdminInternalReservationsPage.jsx";
 
 export default function App() {
   const [activePage, setActivePage] = useState("reservationList");
@@ -56,6 +57,8 @@ export default function App() {
         }
       />
     );
+  } else if (activePage === "internalReservations") {
+    page = <AdminInternalReservationsPage />;
   } else if (activePage === "reservationDetail") {
     page = (
       <ReservationDetailPage
