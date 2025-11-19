@@ -16,6 +16,28 @@ const defaultItems = defaultImages.map((src, index) => ({
   imageUrl: src,
 }));
 
+function ArrowIcon({ direction = "left" }) {
+  const path =
+    direction === "left"
+      ? "M15 6l-6 6 6 6"
+      : "M9 6l6 6-6 6";
+  return (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d={path} />
+    </svg>
+  );
+}
+
 function HeroCarousel({ images = defaultImages, items = null, onItemClick }) {
   const baseItems = Array.isArray(items) && items.length > 0 ? items : defaultItems;
   const total = baseItems.length;
@@ -203,30 +225,80 @@ function HeroCarousel({ images = defaultImages, items = null, onItemClick }) {
         {extended.map((banner, i) => {
           const real = i === 0 ? total : i === total + 1 ? 1 : i;
           const current = baseItems[real - 1] || banner;
+          const note = current?.content ? current.content.split("\n")[0] : "";
+          const imageUrl =
+            current?.imageUrl || banner?.imageUrl || defaultImages[0];
+
           return (
             <div
               className="dc-hero-slide"
               key={`${current?.id || i}-${i}`}
               onClick={() => handleBannerClick(current)}
             >
-              <img
-                src={current?.imageUrl || banner?.imageUrl || defaultImages[0]}
-                alt={current?.title || `Slide ${real}`}
-                onError={(e) => {
-                  e.target.style.display = "none";
-                  e.currentTarget.classList.add("dc-hero-slide-empty");
-                }}
-              />
+              <div className="dc-hero-slide-inner">
+                {imageUrl ? (
+                  <>
+                    <img
+                      src={imageUrl}
+                      alt={current?.title || `Slide ${real}`}
+                      onError={(e) => {
+                        e.currentTarget.dataset.failed = "true";
+                      }}
+                      data-failed="false"
+                    />
+                    <div className="dc-hero-slide-empty">
+                      이미지를 등록해 주세요.
+                    </div>
+                  </>
+                ) : (
+                  <div className="dc-hero-slide-empty dc-hero-slide-empty--standalone">
+                    이미지를 등록해 주세요.
+                  </div>
+                )}
+                {(current?.title || current?.subtitle || note) && (
+                  <div className="dc-hero-slide-copy">
+                    {current?.title && (
+                      <p className="dc-hero-slide-title">{current.title}</p>
+                    )}
+                    {current?.subtitle && (
+                      <p className="dc-hero-slide-subtitle">
+                        {current.subtitle}
+                      </p>
+                    )}
+                    {note && (
+                      <p className="dc-hero-slide-note">{note}</p>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           );
         })}
       </div>
+      <button
+        type="button"
+        className="dc-hero-arrow dc-hero-arrow--left"
+        onClick={prev}
+        aria-label="이전 배너"
+      >
+        <ArrowIcon direction="left" />
+      </button>
+      <button
+        type="button"
+        className="dc-hero-arrow dc-hero-arrow--right"
+        onClick={next}
+        aria-label="다음 배너"
+      >
+        <ArrowIcon direction="right" />
+      </button>
       <div className="dc-hero-dots">
         {baseItems.map((_, i) => (
           <button
             key={i}
             type="button"
-            className={"dc-hero-dot" + (i + 1 === displayIndex ? " active" : "")}
+            className={
+              "dc-hero-dot" + (i + 1 === displayIndex ? " active" : "")
+            }
             onClick={() => goTo(i)}
           />
         ))}

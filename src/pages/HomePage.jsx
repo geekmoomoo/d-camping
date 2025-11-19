@@ -6,6 +6,8 @@ import QuickReserveBox from "../components/QuickReserveBox";
 import BannerModal from "../components/BannerModal";
 import { fetchActiveBanners } from "../services/bannerService";
 
+import "../styles/HomePage.css";
+
 const fallbackBanner = {
   id: "winter-event-2025",
   title: "⛄ 겨울 시즌 오픈 기념 이벤트",
@@ -49,19 +51,23 @@ function HomePage({ onQuickNext, onMapNext }) {
 
   return (
     <>
-      <section className="dc-hero">
-        <div className="dc-hero-left">
-          <HeroCarousel
-            items={displayBanners}
-            onItemClick={(banner) => setActiveBanner(banner)}
-          />
+      <div className="dc-home-page">
+        <section className="dc-hero-section">
+          <div className="dc-hero-left">
+            <HeroCarousel
+              items={displayBanners}
+              onItemClick={(banner) => setActiveBanner(banner)}
+            />
+          </div>
+          <div className="dc-hero-search">
+            <QuickReserveBox onNext={onQuickNext} />
+            <MapSelector onNext={handleMapNext} />
+          </div>
+        </section>
+        <div className="dc-feature-section">
+          <FeatureSection />
         </div>
-        <div className="dc-hero-search">
-          <QuickReserveBox onNext={onQuickNext} />
-          <MapSelector onNext={handleMapNext} />
-        </div>
-      </section>
-      <FeatureSection />
+      </div>
       <BannerModal
         banner={activeBanner}
         onClose={() => setActiveBanner(null)}

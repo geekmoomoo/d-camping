@@ -99,6 +99,21 @@ const evaluatePreCheckFlags = (data = {}) => {
   };
 };
 
+function eachDate(startISO, endISO) {
+  const out = [];
+  const cur = new Date(`${startISO}T00:00:00Z`);
+  const end = new Date(`${endISO}T00:00:00Z`);
+
+  while (cur < end) {
+    const y = cur.getUTCFullYear();
+    const m = String(cur.getUTCMonth() + 1).padStart(2, "0");
+    const d = String(cur.getUTCDate()).padStart(2, "0");
+    out.push(`${y}-${m}-${d}`);
+    cur.setUTCDate(cur.getUTCDate() + 1);
+  }
+  return out;
+}
+
 const mapAdminReservation = (doc) => {
   const data = doc.data() || {};
   const amountBreakdown = data.amountBreakdown || {};
@@ -487,6 +502,39 @@ app.get("/banners", async (req, res) => {
   }
 });
 
+async function getDisabledDatesForRange(siteId, from, to) {
+  const disabled = new Set();
+
+  const resSnap = await db
+    .collection("reservations")
+    .where("siteId", "==", siteId)
+    .where("checkIn", "<", to)
+    .where("checkOut", ">", from)
+    .get();
+
+  resSnap.forEach((doc) => {
+    const r = doc.data() || {};
+    const status = r.status || "PAID";
+    if (status === "PAID" || status === "PENDING") {
+      eachDate(r.checkIn, r.checkOut).forEach((d) => disabled.add(d));
+    }
+  });
+
+  const internalSnap = await db
+    .collection("internalReservations")
+    .where("siteId", "==", siteId)
+    .where("checkIn", "<", to)
+    .where("checkOut", ">", from)
+    .get();
+
+  internalSnap.forEach((doc) => {
+    const r = doc.data() || {};
+    eachDate(r.checkIn, r.checkOut).forEach((d) => disabled.add(d));
+  });
+
+  return Array.from(disabled).sort();
+}
+
 // 예약 가능 조회: GET /api/reservations/availability
 app.get("/reservations/availability", async (req, res) => {
   const { siteId, checkIn, checkOut } = req.query;
@@ -511,6 +559,27 @@ app.get("/reservations/availability", async (req, res) => {
     return res
       .status(500)
       .json({ error: "FAILED_TO_CHECK_AVAILABILITY" });
+  }
+});
+
+app.get("/reservations/disabled-dates", async (req, res) => {
+  const { siteId, from, to } = req.query;
+
+  if (!siteId || !from || !to) {
+    return res
+      .status(400)
+      .json({ error: "siteId, from, to query params are required" });
+  }
+
+  try {
+    console.log("[disabled-dates] hit", { siteId, from, to });
+    const dates = await getDisabledDatesForRange(siteId, from, to);
+    return res.json({ siteId, from, to, dates });
+  } catch (err) {
+    console.error("[disabled-dates] error:", err);
+    return res
+      .status(500)
+      .json({ error: "FAILED_TO_GET_DISABLED_DATES" });
   }
 });
 

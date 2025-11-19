@@ -8,6 +8,7 @@ import {
   toISO,
 } from "../utils/date";
 import { getSites } from "../services/siteService";
+import { fetchDisabledDates } from "../services/reservationService";
 import { API_BASE } from "../config/api";
 
 const parseSiteIdParts = (siteIdValue) => {
@@ -154,6 +155,22 @@ function SiteSelectStep({ data, onChangeFilter, onSelectSite }) {
   const [hasLoadedFirstPage, setHasLoadedFirstPage] = useState(false);
   const gridWrapperRef = useRef(null);
   const SITE_PAGE_LIMIT = 10;
+  const [calendarSiteId, setCalendarSiteId] = useState(null);
+  const [disabledDates, setDisabledDates] = useState([]);
+
+  const loadDisabledDates = useCallback(async (siteId, fromISO, toISO) => {
+    if (!siteId || !fromISO || !toISO) {
+      setDisabledDates([]);
+      return;
+    }
+    try {
+      const data = await fetchDisabledDates({ siteId, from: fromISO, to: toISO });
+      setDisabledDates(Array.isArray(data?.dates) ? data.dates : []);
+    } catch (err) {
+      console.error("[SiteSelectStep] disabled dates fetch error", err);
+      setDisabledDates([]);
+    }
+  }, []);
 
   const loadSites = useCallback(async ({ append = false } = {}) => {
     if (siteLoading) return;
@@ -258,6 +275,19 @@ function SiteSelectStep({ data, onChangeFilter, onSelectSite }) {
   );
 
   useEffect(() => {
+    if (filteredSites.length === 0) {
+      setCalendarSiteId(null);
+      return;
+    }
+    if (
+      !calendarSiteId ||
+      !filteredSites.some((site) => site.id === calendarSiteId)
+    ) {
+      setCalendarSiteId(filteredSites[0].id);
+    }
+  }, [filteredSites, calendarSiteId]);
+
+  useEffect(() => {
     if (
       !checkIn ||
       !checkOut ||
@@ -309,6 +339,20 @@ function SiteSelectStep({ data, onChangeFilter, onSelectSite }) {
     };
   }, [checkIn, checkOut, filteredSiteIds.join(",")]);
 
+  useEffect(() => {
+    if (!calendarSiteId) {
+      setDisabledDates([]);
+      return undefined;
+    }
+    const startDate = new Date();
+    startDate.setHours(0, 0, 0, 0);
+    const fromISO = toISO(startDate);
+    const endDate = new Date(startDate);
+    endDate.setMonth(endDate.getMonth() + 3);
+    const toISOValue = toISO(endDate);
+    loadDisabledDates(calendarSiteId, fromISO, toISOValue);
+  }, [calendarSiteId, loadDisabledDates]);
+
   return (
     <section className="dc-step-card dc-site-select-card">
       <div className="dc-site-grid-wrapper" ref={gridWrapperRef}>
@@ -319,7 +363,11 @@ function SiteSelectStep({ data, onChangeFilter, onSelectSite }) {
             </div>
           ) : (
             filteredSites.map((site) => (
-              <div className="dc-site-card" key={site.id}>
+              <div
+                className="dc-site-card"
+                key={site.id}
+                onMouseEnter={() => setCalendarSiteId(site.id)}
+              >
                 <div className="dc-site-thumb-wrap">
                   <img
                     className="dc-site-thumb"
@@ -389,6 +437,7 @@ function SiteSelectStep({ data, onChangeFilter, onSelectSite }) {
                           if (siteAvailability[site.id] === false) return;
                           onSelectSite(site);
                         }}
+                        onFocus={() => setCalendarSiteId(site.id)}
                         disabled={siteAvailability[site.id] === false}
                         aria-disabled={siteAvailability[site.id] === false}
                       >
@@ -469,6 +518,10 @@ function SiteSelectStep({ data, onChangeFilter, onSelectSite }) {
               onDateClick={handleDateClick}
               monthLabel={monthLabel}
               onMonthChange={handleMonthChange}
+              siteId={calendarSiteId}
+              year={calYear}
+              month={calMonth}
+              disabledDates={disabledDates}
             />
 
             <button

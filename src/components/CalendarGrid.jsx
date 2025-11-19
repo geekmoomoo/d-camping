@@ -32,16 +32,18 @@ function CalendarGrid({
   );
 
   useEffect(() => {
-    if (!siteId || !year || !month) {
+    if (!siteId || year == null || month == null) {
       setServerDisabledDates([]);
       return undefined;
     }
     let cancelled = false;
     const controller = new AbortController();
+    const fromDate = new Date(year, month, 1);
+    const nextMonth = new Date(year, month + 1, 1);
     const params = new URLSearchParams({
       siteId,
-      year,
-      month,
+      from: toISO(fromDate),
+      to: toISO(nextMonth),
     });
     const fetchDisabledDates = async () => {
       try {
@@ -52,7 +54,12 @@ function CalendarGrid({
         if (!response.ok) throw new Error("disabled dates unavailable");
         const data = await response.json();
         if (!cancelled) {
-          setServerDisabledDates(data.disabledCheckInDates || []);
+          const fetchedDates = Array.isArray(data?.dates)
+            ? data.dates
+            : Array.isArray(data?.disabledCheckInDates)
+            ? data.disabledCheckInDates
+            : [];
+          setServerDisabledDates(fetchedDates);
         }
       } catch (err) {
         if (err.name === "AbortError") return;

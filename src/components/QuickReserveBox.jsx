@@ -9,6 +9,63 @@ import {
 } from "../utils/date";
 import SiteTypeButton from "./SiteTypeButton";
 
+function CalendarIcon() {
+  return (
+    <svg
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <rect x="3" y="5" width="18" height="16" rx="3" />
+      <path d="M7 3v4M17 3v4M3 11h18" />
+    </svg>
+  );
+}
+
+function UsersIcon() {
+  return (
+    <svg
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M16 21v-2c0-1.1-.9-2-2-2H10c-1.1 0-2 .9-2 2v2" />
+      <path d="M12 7a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" />
+      <path d="M5 21c0-2 3-3 7-3s7 1 7 3" />
+    </svg>
+  );
+}
+
+function HighlightIcon() {
+  return (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M12 3v4M12 17v4M5.2 5.2l2.8 2.8M16 16l2.8 2.8M3 12h4M17 12h4M5.2 18.8l2.8-2.8M16 8l2.8-2.8" />
+    </svg>
+  );
+}
+
 function QuickReserveBox({ onNext }) {
   const [checkIn, setCheckIn] = useState("");
   const [checkOut, setCheckOut] = useState("");
@@ -216,65 +273,99 @@ function QuickReserveBox({ onNext }) {
     <>
       <form className="dc-qb dc-qb-quick" onSubmit={handleSubmit}>
         <div className="dc-qb-header dc-qb-header-green">
-        <div className="dc-qb-title">
-            <span className="dc-qb-title-icon">⚡</span>
+          <div className="dc-qb-title">
+            <span className="dc-qb-title-icon">
+              <HighlightIcon />
+            </span>
             빠른 예약
           </div>
         </div>
 
-        <div className="dc-qb-bar-row">
+        <div className="dc-qb-fields">
           <button
             type="button"
-            className="dc-qb-btn dc-qb-date-btn"
+            className="dc-qb-field"
             onClick={openDateSheet}
           >
-            <div className="dc-qb-btn-label">
-              <span className="dc-qb-bar-icon">📅</span>
-              <div className="dc-qb-btn-info">
-                <span
-                  className={
-                    checkIn && checkOut
-                      ? "dc-qb-btn-main"
-                      : "dc-qb-btn-main dc-qb-bar-placeholder"
-                  }
-                >
-                  {checkIn && checkOut ? rangeText : "날짜 선택"}
-                </span>
-                <span className="dc-qb-btn-sub">
-                  {checkIn && dDay !== null ? `D-${dDay}` : "D-day"}
-                </span>
-              </div>
+            <div className="dc-qb-field-icon">
+              <CalendarIcon />
             </div>
+            <div className="dc-qb-field-body">
+              <span className="dc-qb-field-label">입실일</span>
+              <span
+                className={
+                  checkIn
+                    ? "dc-qb-field-value"
+                    : "dc-qb-field-value dc-qb-field-placeholder"
+                }
+              >
+                {checkIn ? formatDateLabel(checkIn) : "입실일 선택"}
+              </span>
+            </div>
+            <span className="dc-qb-field-meta">
+              {checkIn && dDay !== null ? `D-${dDay}` : "여정을 계획하세요"}
+            </span>
           </button>
 
-          <div className="dc-inline-people-control">
-            <div className="dc-qb-btn-label">
-              <span className="dc-qb-bar-icon">👥</span>
-              <div className="dc-inline-people-row">
-                <button
-                  type="button"
-                  className="dc-inline-people-btn"
-                  onClick={() => handlePeopleChange(-1)}
-                  disabled={people <= 1}
-                  aria-label="인원 줄이기"
-                >
-                  -
-                </button>
-                <span className="dc-inline-people-value vertical-align">
-                  인원 {people}명
-                </span>
-                <button
-                  type="button"
-                  className="dc-inline-people-btn"
-                  onClick={() => handlePeopleChange(1)}
-                  disabled={people >= 16}
-                  aria-label="인원 늘리기"
-                >
-                  +
-                </button>
-              </div>
+          <button
+            type="button"
+            className="dc-qb-field"
+            onClick={openDateSheet}
+          >
+            <div className="dc-qb-field-icon">
+              <CalendarIcon />
+            </div>
+            <div className="dc-qb-field-body">
+              <span className="dc-qb-field-label">퇴실일</span>
+              <span
+                className={
+                  checkOut
+                    ? "dc-qb-field-value"
+                    : "dc-qb-field-value dc-qb-field-placeholder"
+                }
+              >
+                {checkOut ? formatDateLabel(checkOut) : "퇴실일 선택"}
+              </span>
+            </div>
+            <span className="dc-qb-field-meta">
+              {checkOut ? "휴식을 기다립니다" : "누르면 선택"}
+            </span>
+          </button>
+
+          <div className="dc-qb-field dc-qb-field--people">
+            <div className="dc-qb-field-icon">
+              <UsersIcon />
+            </div>
+            <div className="dc-qb-field-body">
+              <span className="dc-qb-field-label">일행 수</span>
+              <span className="dc-qb-field-value">{people}명</span>
+            </div>
+            <div className="dc-qb-field-actions">
+              <button
+                type="button"
+                onClick={() => handlePeopleChange(-1)}
+                disabled={people <= 1}
+                aria-label="인원 줄이기"
+              >
+                -
+              </button>
+              <button
+                type="button"
+                onClick={() => handlePeopleChange(1)}
+                disabled={people >= 16}
+                aria-label="인원 늘리기"
+              >
+                +
+              </button>
             </div>
           </div>
+        </div>
+
+        <div className="dc-qb-range-summary">
+          <span>{rangeText}</span>
+          {checkIn && checkOut && dDay !== null && (
+            <span className="dc-qb-range-dday">D-{dDay}</span>
+          )}
         </div>
         <div className="dc-qb-type-label">
           이용 유형

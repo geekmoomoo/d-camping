@@ -69,3 +69,14 @@ export async function submitInquiry(payload) {
   }
   return response.json();
 }
+
+export async function fetchDisabledDates({ siteId, from, to }) {
+  const params = new URLSearchParams({ siteId, from, to });
+  const res = await fetch(
+    `${API_BASE}/reservations/disabled-dates?${params.toString()}`
+  );
+  if (!res.ok) {
+    throw new Error("FAILED_TO_FETCH_DISABLED_DATES");
+  }
+  return res.json();
+}
