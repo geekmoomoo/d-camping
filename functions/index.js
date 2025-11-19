@@ -466,6 +466,27 @@ app.get("/sites", async (req, res) => {
   }
 });
 
+// 사용자용 배너 목록: GET /banners
+app.get("/banners", async (req, res) => {
+  try {
+    const snapshot = await db
+      .collection("banners")
+      .where("active", "==", true)
+      .orderBy("order", "asc")
+      .get();
+
+    const items = snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+
+    return res.json(items);
+  } catch (err) {
+    console.error("[banners] list error:", err);
+    return res.status(500).json({ error: "FAILED_TO_LOAD_BANNERS" });
+  }
+});
+
 // 예약 가능 조회: GET /api/reservations/availability
 app.get("/reservations/availability", async (req, res) => {
   const { siteId, checkIn, checkOut } = req.query;

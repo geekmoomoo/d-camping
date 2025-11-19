@@ -8,9 +8,18 @@ const defaultImages = [
   "banners/banner5.jpg",
 ];
 
-function HeroCarousel({ images = defaultImages }) {
-  const total = images.length;
-  const extended = [images[total - 1], ...images, images[0]];
+const defaultItems = defaultImages.map((src, index) => ({
+  id: `default-${index}`,
+  title: "",
+  subtitle: "",
+  content: "",
+  imageUrl: src,
+}));
+
+function HeroCarousel({ images = defaultImages, items = null, onItemClick }) {
+  const baseItems = Array.isArray(items) && items.length > 0 ? items : defaultItems;
+  const total = baseItems.length;
+  const extended = [baseItems[total - 1], ...baseItems, baseItems[0]];
 
   const [currentIndex, setCurrentIndex] = useState(1);
   const [isTransitioning, setIsTransitioning] = useState(true);
@@ -85,9 +94,11 @@ function HeroCarousel({ images = defaultImages }) {
     }
   }, [isTransitioning]);
 
-  const handleBannerClick = (realSlideIndex) => {
+  const handleBannerClick = (banner) => {
     if (dragRef.current.preventClick) return;
-    console.log(`배너 ${realSlideIndex} 클릭`);
+    if (typeof onItemClick === "function") {
+      onItemClick(banner);
+    }
   };
 
   const beginDrag = (clientX) => {
@@ -189,17 +200,18 @@ function HeroCarousel({ images = defaultImages }) {
         }}
         onTransitionEnd={handleTransitionEnd}
       >
-        {extended.map((src, i) => {
+        {extended.map((banner, i) => {
           const real = i === 0 ? total : i === total + 1 ? 1 : i;
+          const current = baseItems[real - 1] || banner;
           return (
             <div
               className="dc-hero-slide"
-              key={`${src}-${i}`}
-              onClick={() => handleBannerClick(real)}
+              key={`${current?.id || i}-${i}`}
+              onClick={() => handleBannerClick(current)}
             >
               <img
-                src={src}
-                alt=""
+                src={current?.imageUrl || banner?.imageUrl || defaultImages[0]}
+                alt={current?.title || `Slide ${real}`}
                 onError={(e) => {
                   e.target.style.display = "none";
                   e.currentTarget.classList.add("dc-hero-slide-empty");
@@ -210,7 +222,7 @@ function HeroCarousel({ images = defaultImages }) {
         })}
       </div>
       <div className="dc-hero-dots">
-        {images.map((_, i) => (
+        {baseItems.map((_, i) => (
           <button
             key={i}
             type="button"
