@@ -18,7 +18,6 @@ setGlobalOptions({
 
 // 🔹 Firebase Admin 초기화
 initializeApp();
-initializeApp();
 const db = getFirestore();
 const reservationsRef = db.collection("reservations");
 const sitesRef = db.collection("sites");
@@ -464,6 +463,33 @@ app.get("/sites", async (req, res) => {
   } catch (err) {
     console.error("Error fetching sites:", err);
     return res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// 예약 가능 조회: GET /api/reservations/availability
+app.get("/reservations/availability", async (req, res) => {
+  const { siteId, checkIn, checkOut } = req.query;
+  if (!siteId || !checkIn || !checkOut) {
+    return res
+      .status(400)
+      .json({ error: "siteId, checkIn, checkOut required" });
+  }
+
+  try {
+    console.log("[availability] handler hit", { siteId, checkIn, checkOut });
+    const conflict = await hasPaidConflict(siteId, checkIn, checkOut);
+    return res.json({
+      siteId,
+      checkIn,
+      checkOut,
+      available: !conflict,
+      conflict,
+    });
+  } catch (err) {
+    console.error("[AVAILABILITY] error:", err);
+    return res
+      .status(500)
+      .json({ error: "FAILED_TO_CHECK_AVAILABILITY" });
   }
 });
 

@@ -385,7 +385,12 @@ function SiteSelectStep({ data, onChangeFilter, onSelectSite }) {
                       <button
                         type="button"
                         className="dc-site-book-btn"
-                        onClick={() => onSelectSite(site)}
+                        onClick={() => {
+                          if (siteAvailability[site.id] === false) return;
+                          onSelectSite(site);
+                        }}
+                        disabled={siteAvailability[site.id] === false}
+                        aria-disabled={siteAvailability[site.id] === false}
                       >
                         예약하기
                       </button>
