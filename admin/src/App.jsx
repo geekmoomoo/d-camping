@@ -9,6 +9,7 @@ import ReservationDetailPage from "./pages/ReservationDetailPage.jsx";
 import SiteStatusPage from "./pages/SiteStatusPage.jsx";
 import SiteManagePage from "./pages/SiteManagePage.jsx";
 import AdminInternalReservationsPage from "./pages/AdminInternalReservationsPage.jsx";
+import BannerAdminPage from "./pages/BannerAdminPage.jsx";
 
 export default function App() {
   const [activePage, setActivePage] = useState("reservationList");
@@ -72,6 +73,8 @@ export default function App() {
     page = <RefundRequestsPage />;
   } else if (activePage === "inquiries") {
     page = <InquiryListPage />;
+  } else if (activePage === "banners") {
+    page = <BannerAdminPage />;
   } else {
     page = <DashboardPage />;
   }

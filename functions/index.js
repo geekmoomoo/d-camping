@@ -825,6 +825,83 @@ app.post("/payments/confirm", async (req, res) => {
   }
 });
 
+
+// 관리자 배너 목록: GET /admin/banners
+app.get("/admin/banners", async (req, res) => {
+  try {
+    const snapshot = await db
+      .collection("banners")
+      .orderBy("order", "asc")
+      .get();
+
+    const items = snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+
+    return res.json(items);
+  } catch (err) {
+    console.error("[admin banners] list error:", err);
+    return res.status(500).json({ error: "FAILED_TO_LIST_BANNERS" });
+  }
+});
+
+// 관리자 배너 생성: POST /admin/banners
+app.post("/admin/banners", async (req, res) => {
+  try {
+    const data = req.body;
+    if (!data?.title) {
+      return res.status(400).json({ error: "TITLE_REQUIRED" });
+    }
+
+    const ref = await db.collection("banners").add({
+      title: data.title,
+      subtitle: data.subtitle || "",
+      content: data.content || "",
+      imageUrl: data.imageUrl || "",
+      active: typeof data.active === "boolean" ? data.active : true,
+      order: typeof data.order === "number" ? data.order : 1,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+
+    return res.json({ id: ref.id });
+  } catch (err) {
+    console.error("[admin banners] create error:", err);
+    return res.status(500).json({ error: "FAILED_TO_CREATE_BANNER" });
+  }
+});
+
+// 관리자 배너 수정: PATCH /admin/banners/:id
+app.patch("/admin/banners/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const data = req.body || {};
+
+    await db.collection("banners").doc(id).update({
+      ...data,
+      updatedAt: Date.now(),
+    });
+
+    return res.json({ id });
+  } catch (err) {
+    console.error("[admin banners] update error:", err);
+    return res.status(500).json({ error: "FAILED_TO_UPDATE_BANNER" });
+  }
+});
+
+// 관리자 배너 삭제: DELETE /admin/banners/:id
+app.delete("/admin/banners/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    await db.collection("banners").doc(id).delete();
+    return res.json({ id });
+  } catch (err) {
+    console.error("[admin banners] delete error:", err);
+    return res.status(500).json({ error: "FAILED_TO_DELETE_BANNER" });
+  }
+});
+
 // 관리자 예약 목록: GET /admin/reservations
 app.get("/admin/reservations", async (req, res) => {
   try {

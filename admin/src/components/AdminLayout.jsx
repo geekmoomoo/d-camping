@@ -8,6 +8,7 @@ const MENU_ITEMS = [
   { id: "reservationList", label: "전체 예약" },
   { id: "internalReservations", label: "내부 예약 관리" },
   { id: "refunds", label: "환불 요청" },
+  { id: "banners", label: "배너 관리" },
   { id: "inquiries", label: "문의" },
 ];
 
