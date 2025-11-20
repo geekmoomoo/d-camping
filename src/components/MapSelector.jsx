@@ -286,11 +286,10 @@ const getDistance = (a, b) => {
         <div className="dc-qb">
           <div className="dc-qb-header dc-qb-header-blue">
             <div className="dc-qb-title">
-              <span className="dc-qb-title-icon">지도</span>
-              지도에서 선택
+              <span className="dc-qb-title-icon">🗺️</span>
+              <span className="dc-qb-title-text">지도에서 선택</span>
             </div>
           </div>
-
           <div className="map-selector-type-grid">
             {TYPE_OPTIONS.map((option) => (
               <button

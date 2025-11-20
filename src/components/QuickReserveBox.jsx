@@ -239,7 +239,7 @@ function QuickReserveBox({ onNext }) {
         <div className="dc-qb-header dc-qb-header-green">
           <div className="dc-qb-title">
             <span className="dc-qb-title-icon">⚡</span>
-            빠른 예약
+            간편 예약
           </div>
         </div>
 
