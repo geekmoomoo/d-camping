@@ -9,10 +9,10 @@ import { sites } from "../config/sitesConfig";
 import { getSites } from "../services/siteService";
 
 const TYPE_OPTIONS = [
-  { label: "자가 카라반", value: "caravan" },
-  { label: "카바나 데크", value: "cabana" },
-  { label: "텐트 사이트", value: "camp" },
-  { label: "팬션", value: "room" },
+  { label: "자가 카라반", value: "caravan", icon: "🚐" },
+  { label: "카바나 데크", value: "cabana", icon: "🏡" },
+  { label: "텐트 사이트", value: "camp", icon: "⛺" },
+  { label: "팬션", value: "room", icon: "🏘️" },
 ];
 
 
@@ -308,22 +308,15 @@ const getDistance = (a, b) => {
                   }
                 }}
               >
-                {option.label}
+                <span className="map-selector-type-icon" aria-hidden="true">
+                  {option.icon}
+                </span>
+                <span>{option.label}</span>
               </button>
             ))}
           </div>
 
           <div className="map-selector-canvas" ref={frameRef}>
-            <button
-              type="button"
-              className={
-                "map-selector-overview" +
-                (isOverviewActive ? " active" : "")
-              }
-              onClick={handleOverview}
-            >
-              전체보기
-            </button>
             <div
               ref={panRef}
               className={
@@ -365,43 +358,53 @@ const getDistance = (a, b) => {
                 })}
               </div>
             </div>
-
-            <div className="map-selector-zoom">
-              <button
-                type="button"
-                onClick={() => changeZoom(-ZOOM_STEP)}
-                disabled={scale <= MIN_ZOOM}
-              >
-                -
-              </button>
-              <button
-                type="button"
-                onClick={() => changeZoom(ZOOM_STEP)}
-                disabled={scale >= MAX_ZOOM}
-              >
-                +
-              </button>
-            </div>
           </div>
-
+          <div className="map-selector-bottom-controls">
           <button
             type="button"
-            className="map-selector-submit"
-            disabled={!selectedSite}
-            onClick={handleSubmit}
+            className={
+              "map-selector-overview" +
+              (isOverviewActive ? " active" : "")
+            }
+            onClick={handleOverview}
           >
-            {selectedSite ? (
-              <>
-                <span className="map-selector-submit-site">{selectedSite.id}</span>{" "}
-                예약하기
-              </>
-            ) : (
-              "지도를 눌러 예약할 구역을 선택하세요"
-            )}
+            전체보기
           </button>
+          <div className="map-selector-zoom">
+            <button
+              type="button"
+              onClick={() => changeZoom(-ZOOM_STEP)}
+              disabled={scale <= MIN_ZOOM}
+            >
+              -
+            </button>
+            <button
+              type="button"
+              onClick={() => changeZoom(ZOOM_STEP)}
+              disabled={scale >= MAX_ZOOM}
+            >
+              +
+            </button>
+          </div>
         </div>
+        <button
+          type="button"
+          className="map-selector-submit"
+          disabled={!selectedSite}
+          onClick={handleSubmit}
+        >
+          {selectedSite ? (
+            <>
+              <span className="map-selector-submit-site">{selectedSite.id}</span>{" "}
+              예약하기
+            </>
+          ) : (
+            "지도를 눌러 예약할 구역을 선택하세요"
+          )}
+        </button>
       </div>
-    </section>
+    </div>
+  </section>
   );
 }
 

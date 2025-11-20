@@ -103,12 +103,7 @@ function Header({ onMenuSelect }) {
             role="presentation"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="dc-nav-sheet-header">
-              <span>메뉴</span>
-              <button type="button" onClick={closeMenu} aria-label="메뉴 닫기">
-                ×
-              </button>
-            </div>
+          <div className="dc-nav-sheet-header" aria-label="메뉴" />
             <div className="dc-nav-sheet-links">
               {navLinks.map((link) => (
                 <button
