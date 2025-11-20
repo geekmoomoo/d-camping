@@ -1087,16 +1087,23 @@ p {
   font-size: 1.2rem;
 }
 
+.map-selector-body {
+  margin-top: 18px;
+}
 
-.map-selector-bottom-controls {
-  margin-top: 12px;
+.map-selector-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.map-selector-controls {
   display: flex;
   gap: 10px;
   align-items: center;
-  width: 100%;
 }
 
-.map-selector-bottom-controls .map-selector-overview {
+.map-selector-controls .map-selector-overview {
   flex: 1;
   border-radius: 12px;
   border: 1px solid rgba(0, 0, 0, 0.1);
@@ -1108,12 +1115,12 @@ p {
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
 }
 
-.map-selector-bottom-controls .map-selector-zoom {
+.map-selector-controls .map-selector-zoom {
   display: flex;
   gap: 6px;
 }
 
-.map-selector-bottom-controls .map-selector-zoom button {
+.map-selector-controls .map-selector-zoom button {
   width: 38px;
   height: 38px;
   border-radius: 12px;
@@ -1140,6 +1147,123 @@ p {
   box-shadow: var(--dc-shadow-md);
   width: 100%;
   margin: 0;
+}
+
+.map-selector-type-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+}
+
+.map-selector-type-btn {
+  border-radius: var(--dc-radius-sm);
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  background: #fff;
+  color: #111;
+  padding: 10px 14px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  padding-left: 16px;
+}
+
+.map-selector-type-btn.active {
+  border-color: var(--dc-accent);
+  color: var(--dc-accent);
+  background: rgba(74, 222, 128, 0.08);
+}
+
+.map-selector-type-icon {
+  font-size: 1.2rem;
+}
+
+.map-selector-map {
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.map-selector-canvas {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1200 / 957;
+  border-radius: var(--dc-radius-md);
+  overflow: hidden;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  background: #fff;
+}
+
+.map-selector-overlay-overview {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  background: rgba(255, 255, 255, 0.95);
+  font-weight: 600;
+  color: #0b6e3a;
+  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.12);
+  z-index: 5;
+}
+
+.map-selector-overlay-zoom {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 5;
+}
+
+.map-selector-overlay-zoom button {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  background: rgba(255, 255, 255, 0.95);
+  font-weight: 600;
+  font-size: 1.1rem;
+  color: #0b6e3a;
+  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.12);
+}
+
+.map-selector-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.map-selector-controls .map-selector-overview {
+  flex: 1;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  background: #fff;
+  padding: 12px 16px;
+  font-weight: 600;
+  color: #0b6e3a;
+  text-align: left;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+}
+
+.map-selector-controls .map-selector-zoom {
+  display: flex;
+  gap: 6px;
+}
+
+.map-selector-controls .map-selector-zoom button {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  background: #fff;
+  font-weight: 600;
+  font-size: 1.1rem;
 }
 
 .map-selector-pan {

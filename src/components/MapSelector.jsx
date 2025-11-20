@@ -1,4 +1,4 @@
-import React, {
+﻿import React, {
   useCallback,
   useEffect,
   useMemo,
@@ -14,8 +14,6 @@ const TYPE_OPTIONS = [
   { label: "텐트 사이트", value: "camp", icon: "⛺" },
   { label: "팬션", value: "room", icon: "🏘️" },
 ];
-
-
 
 const TYPE_FOCUS = {
   caravan: { scale: 2.5, center: { x: 49.5, y: 93.5 } },
@@ -129,9 +127,7 @@ function MapSelector({ onNext }) {
   );
 
   useEffect(() => {
-    if (selectedType) {
-      focusOnType(selectedType);
-    }
+    if (selectedType) focusOnType(selectedType);
   }, [selectedType, focusOnType]);
 
   useEffect(() => {
@@ -155,22 +151,22 @@ function MapSelector({ onNext }) {
     setOffset(getCenteredOffset(1));
   }, [getCenteredOffset]);
 
-const changeZoom = (delta) => {
-  setScale((prev) => {
-    const next = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, prev + delta));
-    if (next !== prev) {
-      setOffset((prevOffset) => clampOffset(next, prevOffset));
-    }
-    return next;
-  });
-};
+  const changeZoom = (delta) => {
+    setScale((prev) => {
+      const next = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, prev + delta));
+      if (next !== prev) {
+        setOffset((prevOffset) => clampOffset(next, prevOffset));
+      }
+      return next;
+    });
+  };
 
-const getDistance = (a, b) => {
-  if (!a || !b) return 0;
-  const dx = a.clientX - b.clientX;
-  const dy = a.clientY - b.clientY;
-  return Math.sqrt(dx * dx + dy * dy);
-};
+  const getDistance = (a, b) => {
+    if (!a || !b) return 0;
+    const dx = a.clientX - b.clientX;
+    const dy = a.clientY - b.clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+  };
 
   const handlePointerDown = (e) => {
     if (
@@ -184,9 +180,7 @@ const getDistance = (a, b) => {
       clientY: e.clientY,
     });
     const pan = panRef.current;
-    if (pan) {
-      pan.setPointerCapture(e.pointerId);
-    }
+    if (pan) pan.setPointerCapture(e.pointerId);
 
     if (pointersRef.current.size === 1) {
       dragRef.current = {
@@ -273,9 +267,7 @@ const getDistance = (a, b) => {
       pinchRef.current.active = false;
     }
     const pan = panRef.current;
-    if (pan) {
-      pan.releasePointerCapture(e.pointerId);
-    }
+    if (pan) pan.releasePointerCapture(e.pointerId);
   };
 
   const isOverviewActive = !selectedType;
@@ -315,8 +307,11 @@ const getDistance = (a, b) => {
               </button>
             ))}
           </div>
+        </div>
+      </div>
 
-          <div className="map-selector-canvas" ref={frameRef}>
+      <div className="map-selector-map">
+        <div className="map-selector-canvas" ref={frameRef}>
             <div
               ref={panRef}
               className={
@@ -341,25 +336,48 @@ const getDistance = (a, b) => {
                       : site.id;
                   return (
                     <button
-                      key={site.id}
-                      type="button"
-                      className={
-                        "map-selector-point" + (isActive ? " selected" : "")
-                      }
-                      style={{
-                        left: `${site.x}%`,
-                        top: `${site.y}%`,
-                      }}
-                      onClick={() => handleSelectSite(site)}
-                    >
-                      {label || site.id}
+                    key={site.id}
+                    type="button"
+                    className={
+                      "map-selector-point" + (isActive ? " selected" : "")
+                    }
+                    style={{
+                      left: `${site.x}%`,
+                      top: `${site.y}%`,
+                    }}
+                    onClick={() => handleSelectSite(site)}
+                  >
+                    {label || site.id}
                     </button>
                   );
                 })}
               </div>
             </div>
+            <button
+              type="button"
+              className="map-selector-overlay-overview"
+              onClick={handleOverview}
+            >
+              전체보기
+            </button>
+            <div className="map-selector-overlay-zoom">
+              <button
+                type="button"
+                onClick={() => changeZoom(-ZOOM_STEP)}
+                disabled={scale <= MIN_ZOOM}
+              >
+                -
+              </button>
+              <button
+                type="button"
+                onClick={() => changeZoom(ZOOM_STEP)}
+                disabled={scale >= MAX_ZOOM}
+              >
+                +
+              </button>
+            </div>
           </div>
-          <div className="map-selector-bottom-controls">
+        <div className="map-selector-controls">
           <button
             type="button"
             className={
@@ -403,8 +421,7 @@ const getDistance = (a, b) => {
           )}
         </button>
       </div>
-    </div>
-  </section>
+    </section>
   );
 }
 
