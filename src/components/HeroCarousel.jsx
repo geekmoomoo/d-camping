@@ -241,10 +241,15 @@ function HeroCarousel({ images = defaultImages, items = null, onItemClick }) {
                     <img
                       src={imageUrl}
                       alt={current?.title || `Slide ${real}`}
+                      onLoad={(e) => {
+                        e.currentTarget.dataset.loaded = "true";
+                      }}
                       onError={(e) => {
                         e.currentTarget.dataset.failed = "true";
+                        e.currentTarget.dataset.loaded = "true";
                       }}
                       data-failed="false"
+                      data-loaded="false"
                     />
                     <div className="dc-hero-slide-empty">
                       이미지를 등록해 주세요.

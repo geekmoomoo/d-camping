@@ -1,4 +1,4 @@
-﻿import React, { useCallback, useState } from "react";
+﻿import React, { useCallback, useEffect, useRef, useState } from "react";
 
 const navLinks = [
   { id: "lookup", label: "예약확인" },
@@ -8,6 +8,7 @@ const navLinks = [
 
 function Header({ onMenuSelect }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const headerRef = useRef(null);
   const closeMenu = () => setIsMenuOpen(false);
   const scrollToTop = useCallback(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -19,6 +20,30 @@ function Header({ onMenuSelect }) {
     }
   };
 
+
+  useEffect(() => {
+    document.body.style.overflow = isMenuOpen ? "hidden" : "";
+    document.body.style.position = isMenuOpen ? "fixed" : "";
+    document.body.style.width = isMenuOpen ? "100%" : "";
+    const handleDocumentClick = (event) => {
+      if (!isMenuOpen) return;
+      if (headerRef.current?.contains(event.target)) {
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      closeMenu();
+    };
+    if (isMenuOpen) {
+      document.addEventListener("click", handleDocumentClick, true);
+    }
+    return () => {
+      document.removeEventListener("click", handleDocumentClick, true);
+      document.body.style.overflow = "";
+      document.body.style.position = "";
+      document.body.style.width = "";
+    };
+  }, [isMenuOpen, closeMenu]);
   const handleSelect = (id) => {
     if (onMenuSelect) {
       onMenuSelect(id);
@@ -27,7 +52,10 @@ function Header({ onMenuSelect }) {
   };
 
   return (
-    <header className="dc-header">
+    <header
+      ref={headerRef}
+      className={`dc-header${isMenuOpen ? " dc-header-menu-open" : ""}`}
+    >
       <div className="dc-header-inner">
         <div className="dc-header-left">
           <div className="dc-logo-group">
@@ -70,7 +98,11 @@ function Header({ onMenuSelect }) {
 
       {isMenuOpen && (
         <>
-          <div className="dc-nav-sheet">
+          <div
+            className="dc-nav-sheet"
+            role="presentation"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="dc-nav-sheet-header">
               <span>메뉴</span>
               <button type="button" onClick={closeMenu} aria-label="메뉴 닫기">
@@ -92,7 +124,13 @@ function Header({ onMenuSelect }) {
               ))}
             </div>
           </div>
-          <div className="dc-nav-backdrop" onClick={closeMenu} />
+          <div
+            className="dc-nav-backdrop"
+            onClick={(e) => {
+              e.stopPropagation();
+              closeMenu();
+            }}
+          />
         </>
       )}
     </header>
