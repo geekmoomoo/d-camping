@@ -282,121 +282,126 @@ const getDistance = (a, b) => {
 
   return (
     <section className="map-selector">
-      <div className="dc-qb-header dc-qb-header-blue">
-        <div className="dc-qb-title">
-          <span className="dc-qb-title-icon">🗺️</span>
-          지도에서 선택
-        </div>
-      </div>
-      <div className="map-selector-type-grid">
-        {TYPE_OPTIONS.map((option) => (
-          <button
-            key={option.value}
-            type="button"
-            className={
-              "map-selector-type-btn" +
-              (selectedType === option.value ? " active" : "")
-            }
-            onClick={() => {
-              setSelectedSite(null);
-              if (selectedType === option.value) {
-                focusOnType(option.value);
-              } else {
-                setSelectedType(option.value);
-              }
-            }}
-          >
-            {option.label}
-          </button>
-        ))}
-      </div>
-
-      <div className="map-selector-canvas" ref={frameRef}>
-        <button
-          type="button"
-          className={
-            "map-selector-overview" +
-            (isOverviewActive ? " active" : "")
-          }
-          onClick={handleOverview}
-        >
-          전체보기
-        </button>
-        <div
-          ref={panRef}
-          className={
-            "map-selector-pan" + (isDragging ? " dragging" : "")
-          }
-          style={{ transform: `translate(${offset.x}px, ${offset.y}px)` }}
-          onPointerDown={handlePointerDown}
-          onPointerMove={handlePointerMove}
-          onPointerUp={handlePointerUp}
-          onPointerLeave={handlePointerUp}
-        >
-          <div
-            className="map-selector-stage"
-            style={{ transform: `scale(${scale})` }}
-          >
-            <img src="/img/map_02.png" alt="캠핑장 지도" />
-            {filteredSites.map((site) => {
-              const isActive = selectedSite?.id === site.id;
-              const label =
-                site.type === "caravan" || site.type === "cabana"
-                  ? site.id.replace(/\D+/g, "")
-                  : site.id;
-              return (
-                <button
-                  key={site.id}
-                  type="button"
-                  className={
-                    "map-selector-point" + (isActive ? " selected" : "")
-                  }
-                  style={{
-                    left: `${site.x}%`,
-                    top: `${site.y}%`,
-                  }}
-                  onClick={() => handleSelectSite(site)}
-                >
-                  {label || site.id}
-                </button>
-              );
-            })}
+      <div className="dc-home-card">
+        <div className="dc-qb">
+          <div className="dc-qb-header dc-qb-header-blue">
+            <div className="dc-qb-title">
+              <span className="dc-qb-title-icon">지도</span>
+              지도에서 선택
+            </div>
           </div>
-        </div>
 
-        <div className="map-selector-zoom">
+          <div className="map-selector-type-grid">
+            {TYPE_OPTIONS.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                className={
+                  "map-selector-type-btn" +
+                  (selectedType === option.value ? " active" : "")
+                }
+                onClick={() => {
+                  setSelectedSite(null);
+                  if (selectedType === option.value) {
+                    focusOnType(option.value);
+                  } else {
+                    setSelectedType(option.value);
+                  }
+                }}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="map-selector-canvas" ref={frameRef}>
+            <button
+              type="button"
+              className={
+                "map-selector-overview" +
+                (isOverviewActive ? " active" : "")
+              }
+              onClick={handleOverview}
+            >
+              전체보기
+            </button>
+            <div
+              ref={panRef}
+              className={
+                "map-selector-pan" + (isDragging ? " dragging" : "")
+              }
+              style={{ transform: `translate(${offset.x}px, ${offset.y}px)` }}
+              onPointerDown={handlePointerDown}
+              onPointerMove={handlePointerMove}
+              onPointerUp={handlePointerUp}
+              onPointerLeave={handlePointerUp}
+            >
+              <div
+                className="map-selector-stage"
+                style={{ transform: `scale(${scale})` }}
+              >
+                <img src="/img/map_02.png" alt="금성산성 오토캠핑장 지도" />
+                {filteredSites.map((site) => {
+                  const isActive = selectedSite?.id === site.id;
+                  const label =
+                    site.type === "caravan" || site.type === "cabana"
+                      ? site.id.replace(/\D+/g, "")
+                      : site.id;
+                  return (
+                    <button
+                      key={site.id}
+                      type="button"
+                      className={
+                        "map-selector-point" + (isActive ? " selected" : "")
+                      }
+                      style={{
+                        left: `${site.x}%`,
+                        top: `${site.y}%`,
+                      }}
+                      onClick={() => handleSelectSite(site)}
+                    >
+                      {label || site.id}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="map-selector-zoom">
+              <button
+                type="button"
+                onClick={() => changeZoom(-ZOOM_STEP)}
+                disabled={scale <= MIN_ZOOM}
+              >
+                -
+              </button>
+              <button
+                type="button"
+                onClick={() => changeZoom(ZOOM_STEP)}
+                disabled={scale >= MAX_ZOOM}
+              >
+                +
+              </button>
+            </div>
+          </div>
+
           <button
             type="button"
-            onClick={() => changeZoom(-ZOOM_STEP)}
-            disabled={scale <= MIN_ZOOM}
+            className="map-selector-submit"
+            disabled={!selectedSite}
+            onClick={handleSubmit}
           >
-            -
-          </button>
-          <button
-            type="button"
-            onClick={() => changeZoom(ZOOM_STEP)}
-            disabled={scale >= MAX_ZOOM}
-          >
-            +
+            {selectedSite ? (
+              <>
+                <span className="map-selector-submit-site">{selectedSite.id}</span>{" "}
+                예약하기
+              </>
+            ) : (
+              "지도를 눌러 예약할 구역을 선택하세요"
+            )}
           </button>
         </div>
       </div>
-
-      <button
-        type="button"
-        className="map-selector-submit"
-        disabled={!selectedSite}
-        onClick={handleSubmit}
-      >
-        {selectedSite ? (
-          <>
-            <span className="map-selector-submit-site">{selectedSite.id}</span>{" "}
-            예약하기
-          </>
-        ) : (
-          "다음으로 이동"
-        )}
-      </button>
     </section>
   );
 }

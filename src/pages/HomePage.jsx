@@ -17,7 +17,7 @@ const fallbackBanner = {
 };
 
 function HomeCardSection({ children }) {
-  return <section className="dc-home-card">{children}</section>;
+  return <>{children}</>;
 }
 
 function HomePage({ onQuickNext, onMapNext }) {

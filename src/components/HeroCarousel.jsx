@@ -38,7 +38,7 @@ function ArrowIcon({ direction = "left" }) {
   );
 }
 
-function HeroCarousel({ images = defaultImages, items = null, onItemClick }) {
+function HeroCarousel({ items = null, onItemClick }) {
   const baseItems = Array.isArray(items) && items.length > 0 ? items : defaultItems;
   const total = baseItems.length;
   const extended = [baseItems[total - 1], ...baseItems, baseItems[0]];
@@ -60,6 +60,8 @@ function HeroCarousel({ images = defaultImages, items = null, onItemClick }) {
 
   const next = () => setCurrentIndex((prev) => prev + 1);
   const prev = () => setCurrentIndex((prev) => prev - 1);
+
+  const prevTotalRef = useRef(total);
 
   const startAuto = () => {
     if (intervalRef.current) return;
@@ -95,6 +97,13 @@ function HeroCarousel({ images = defaultImages, items = null, onItemClick }) {
       stopAuto();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [total]);
+
+  useEffect(() => {
+    if (prevTotalRef.current !== total) {
+      setCurrentIndex(1);
+      prevTotalRef.current = total;
+    }
   }, [total]);
 
   const handleTransitionEnd = () => {

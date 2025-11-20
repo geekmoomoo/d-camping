@@ -6,8 +6,8 @@
   --dc-bg-alt: #eef2ea;
   --dc-card: #ffffff;
   --dc-card-strong: #f1f4ef;
-  --dc-border: rgba(0, 0, 0, 0.08);
-  --dc-border-strong: rgba(0, 0, 0, 0.15);
+  --dc-border: transparent;
+  --dc-border-strong: transparent;
   --dc-text: #0f1f17;
   --dc-muted: #5c6a5e;
   --dc-accent: #78b985;
@@ -164,17 +164,6 @@ p {
 .dc-step-card > * {
   position: relative;
   z-index: 1;
-}
-
-.dc-home-card {
-  background: #ffffff; /* Matches .dc-qb card surface */
-  border-radius: var(--dc-radius-lg);
-  border: 1px solid var(--dc-border);
-  box-shadow: var(--dc-shadow-md);
-  padding: clamp(20px, 3vw, 28px);
-  position: relative;
-  overflow: hidden;
-  margin-bottom: clamp(24px, 3vw, 32px);
 }
 
 .dc-btn-primary,
@@ -986,10 +975,40 @@ p {
 /* Map selector component */
 .map-selector {
   margin-top: 18px;
-  padding: 18px;
+  padding: 0;
   display: flex;
   flex-direction: column;
   gap: 16px;
+  background: var(--dc-card);
+  border: 1px solid var(--dc-border);
+  border-radius: var(--dc-radius-lg);
+  box-shadow: var(--dc-shadow-md);
+  overflow: hidden;
+}
+
+.map-selector .dc-qb {
+  margin: 0;
+  background: transparent;
+  border-radius: 0;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+}
+
+.map-selector .dc-qb-header {
+  margin: 0;
+  border-radius: 0;
+  background: #f5faf4;
+  border-bottom: 1px solid #e8efe1;
+  padding: 16px 20px;
+}
+
+.map-selector .dc-qb-header {
+  margin: -24px -24px 16px;
+  border-radius: var(--dc-radius-md) var(--dc-radius-md) 0 0;
+  background: #f5faf4;
+  border-bottom: 1px solid #e8efe1;
+  padding: 16px 20px;
 }
 
 .map-selector-header {

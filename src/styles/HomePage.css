@@ -15,7 +15,7 @@
 
 .dc-home-page {
   width: 100%;
-  max-width: 1200px;
+  max-width: 1100px;
   margin: 0 auto;
   padding: clamp(24px, 4vw, 48px);
   display: flex;
@@ -150,6 +150,39 @@
 .dc-home-page .dc-qb-header {
   margin: -24px -24px 20px;
   border-radius: var(--flat-radius-md) var(--flat-radius-md) 0 0;
+  background: #f5faf4;
+  border-bottom: 1px solid #e8efe1;
+  padding: 16px 20px;
+}
+
+.map-selector .dc-qb-header {
+  margin: -24px -24px 16px;
+  border-radius: var(--flat-radius-md) var(--flat-radius-md) 0 0;
+  background: #f5faf4;
+  border-bottom: 1px solid #e8efe1;
+  padding: 16px 20px;
+}
+
+.dc-home-page .map-selector {
+  background: transparent;
+  border-radius: var(--flat-radius-md);
+  box-shadow: none;
+  padding: 0;
+}
+
+.dc-home-page .map-selector .dc-qb-header {
+  background: #f5faf4;
+  border-bottom: 1px solid #e8efe1;
+  padding: 16px 20px;
+  margin: -24px -24px 16px;
+}
+
+.map-selector {
+  width: 100%;
+}
+
+.dc-home-page .map-selector .dc-qb-header {
+  margin: -24px -24px 16px;
   background: #f5faf4;
   border-bottom: 1px solid #e8efe1;
   padding: 16px 20px;
