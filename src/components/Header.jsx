@@ -1,9 +1,9 @@
 ﻿import React, { useCallback, useEffect, useRef, useState } from "react";
 
 const navLinks = [
-  { id: "lookup", label: "예약확인" },
-  { id: "inquiry", label: "고객문의" },
-  { id: "guide", label: "이용안내" },
+  { id: "lookup", label: "📅 예약확인" },
+  { id: "inquiry", label: "💬 고객문의" },
+  { id: "guide", label: "📖 이용안내" },
 ];
 
 function Header({ onMenuSelect }) {
@@ -100,23 +100,27 @@ function Header({ onMenuSelect }) {
         <>
           <div
             className="dc-nav-sheet"
-            role="presentation"
-            onClick={(e) => e.stopPropagation()}
           >
-          <div className="dc-nav-sheet-header" aria-label="메뉴" />
-            <div className="dc-nav-sheet-links">
-              {navLinks.map((link) => (
-                <button
-                  key={link.id}
-                  type="button"
-                  onClick={() => {
-                    handleSelect(link.id);
-                    closeMenu();
-                  }}
-                >
-                  {link.label}
-                </button>
-              ))}
+            <div
+              className="dc-nav-sheet-card"
+              role="presentation"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="dc-nav-sheet-header" aria-label="메뉴" />
+              <div className="dc-nav-sheet-links">
+                {navLinks.map((link) => (
+                  <button
+                    key={link.id}
+                    type="button"
+                    onClick={() => {
+                      handleSelect(link.id);
+                      closeMenu();
+                    }}
+                  >
+                    {link.label}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
           <div
