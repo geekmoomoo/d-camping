@@ -46,7 +46,6 @@ function SiteSelectStep({ data, onChangeFilter, onSelectSite }) {
   const [checkOut, setCheckOut] = useState(initialCheckOut);
   const [people, setPeople] = useState(initialPeople);
   const [isDateSheetOpen, setIsDateSheetOpen] = useState(false);
-  const [isPeopleSheetOpen, setIsPeopleSheetOpen] = useState(false);
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -59,10 +58,6 @@ function SiteSelectStep({ data, onChangeFilter, onSelectSite }) {
   const [calMonth, setCalMonth] = useState(today.getMonth());
   const selectingCheckOut = !!checkIn && !checkOut;
 
-  const rangeText =
-    checkIn && checkOut
-      ? `${formatDateLabel(checkIn)} ~ ${formatDateLabel(checkOut)}`
-      : "날짜선택";
 
   useEffect(() => {
     if (!onChangeFilter) return;
@@ -80,17 +75,10 @@ function SiteSelectStep({ data, onChangeFilter, onSelectSite }) {
     setCalYear(base.getFullYear());
     setCalMonth(base.getMonth());
     setIsDateSheetOpen(true);
-    setIsPeopleSheetOpen(false);
-  };
-
-  const openPeopleSheet = () => {
-    setIsPeopleSheetOpen(true);
-    setIsDateSheetOpen(false);
   };
 
   const closeSheets = () => {
     setIsDateSheetOpen(false);
-    setIsPeopleSheetOpen(false);
   };
 
   const daysInMonth = (y, m) => new Date(y, m + 1, 0).getDate();
@@ -143,9 +131,6 @@ function SiteSelectStep({ data, onChangeFilter, onSelectSite }) {
     closeSheets();
   };
 
-  const handlePeopleConfirm = () => {
-    closeSheets();
-  };
 
   const [siteList, setSiteList] = useState([]);
   const [siteAvailability, setSiteAvailability] = useState({});
@@ -262,6 +247,13 @@ function SiteSelectStep({ data, onChangeFilter, onSelectSite }) {
   ) : (
     "날짜를 선택해주세요"
   );
+
+  const summaryDates = hasFullDateRange
+    ? `${formatDateLabel(checkIn)} ~ ${formatDateLabel(checkOut)}`
+    : "날짜 선택";
+  const summaryMeta = hasFullDateRange
+    ? `${stayNights}박 ${stayNights + 1}일 | 인원 ${people}명`
+    : `인원 ${people}명`;
 
   const filteredSites = useMemo(() => {
     if (data?.siteType && data.siteType !== "all") {
@@ -453,20 +445,18 @@ function SiteSelectStep({ data, onChangeFilter, onSelectSite }) {
         <div ref={sentinelRef} className="dc-site-sentinel" aria-hidden="true" />
       </div>
 
-      <div className="dc-fixed-filter-bar">
+      <div className="dc-fixed-filter-bar dc-fixed-filter-bar--single">
         <button
           type="button"
-          className="dc-fixed-filter-btn"
+          className="dc-qb-btn date-summary-button"
           onClick={openDateSheet}
         >
-          {checkIn || checkOut ? rangeText : "날짜선택"}
-        </button>
-        <button
-          type="button"
-          className="dc-fixed-filter-btn"
-          onClick={openPeopleSheet}
-        >
-          {`인원 ${people}`}
+          <div className="date-summary-body">
+            <span className="date-summary-dates">
+              <strong>{summaryDates}</strong>
+            </span>
+            <span className="date-summary-meta">{summaryMeta}</span>
+          </div>
         </button>
       </div>
 
@@ -524,31 +514,9 @@ function SiteSelectStep({ data, onChangeFilter, onSelectSite }) {
               disabledDates={disabledDates}
             />
 
-            <button
-              type="button"
-              className="dc-qb-sheet-btn"
-              onClick={handleDateConfirm}
-              disabled={!canApplyDates}
-            >
-              {dateActionLabel}
-            </button>
-          </div>
-        </>
-      )}
-
-      {isPeopleSheetOpen && (
-        <>
-          <div className="dc-qb-sheet-backdrop" onClick={closeSheets} />
-          <div className="dc-qb-sheet dc-qb-sheet-open">
-            <div className="dc-qb-sheet-header">
-              <div>인원 선택</div>
-              <button type="button" onClick={closeSheets}>
-                ✕
-              </button>
-            </div>
             <div className="dc-qb-sheet-sub">
               <span className="dc-text-orange">유아 및 아동</span>도 인원수에{" "}
-              <span className="dc-text-orange">포함</span>해주세요.
+              <span className="dc-text-orange">포함</span>해 주세요.
             </div>
             <div className="dc-qb-people-row">
               <span>인원</span>
@@ -562,16 +530,19 @@ function SiteSelectStep({ data, onChangeFilter, onSelectSite }) {
                 </button>
               </div>
             </div>
+
             <button
               type="button"
               className="dc-qb-sheet-btn"
-              onClick={handlePeopleConfirm}
+              onClick={handleDateConfirm}
+              disabled={!canApplyDates}
             >
-              적용하기
+              {dateActionLabel}
             </button>
           </div>
         </>
       )}
+
     </section>
   );
 }

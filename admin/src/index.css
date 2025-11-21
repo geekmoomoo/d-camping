@@ -1,12 +1,14 @@
 ﻿:root {
-  --retro-bg: #f5ecd8;
-  --retro-panel: #fff7e0;
-  --retro-border: #c9b89a;
-  --retro-border-strong: #b09576;
-  --retro-text: #333333;
-  --retro-muted: #5c4a2a;
-  --retro-accent: #2b78d4;
-  --retro-accent-dark: #1857a4;
+  --retro-bg: #f6f7f3;
+  --retro-panel: #ffffff;
+  --retro-border: #d9e0d7;
+  --retro-border-strong: #b9c5b5;
+  --retro-text: #0f1f17;
+  --retro-muted: #5c6a5e;
+  --retro-accent: #4caf7a;
+  --retro-accent-dark: #1f8c5a;
+  --retro-shadow: 0 16px 32px rgba(15, 23, 15, 0.12);
+  --retro-radius: 14px;
 }
 
 * {
@@ -14,10 +16,11 @@
 }
 
 body,
-html,#root {
+html,
+#root {
   margin: 0;
   padding: 0;
-  font-family: "RetroFont", "IBM Plex Sans KR", "Malgun Gothic", "Apple SD Gothic Neo", system-ui, sans-serif;
+  font-family: "Noto Sans KR", "Pretendard", "IBM Plex Sans KR", "Malgun Gothic", "Apple SD Gothic Neo", system-ui, sans-serif;
   background: var(--retro-bg);
   color: var(--retro-text);
 }
@@ -34,9 +37,10 @@ html,#root {
 }
 
 .dc-admin-sidebar {
-  background: #f0e2c0;
+  background: #ffffff;
   border-right: 1px solid var(--retro-border);
   padding: 24px 16px;
+  box-shadow: 8px 0 30px rgba(15, 23, 15, 0.06);
 }
 
 .dc-logo {
@@ -57,18 +61,22 @@ html,#root {
   padding: 8px 12px;
   text-align: left;
   font-size: 14px;
-  color: #333;
+  color: var(--retro-muted);
   cursor: pointer;
-  transition: background 0.2s ease;
+  border-radius: 10px;
+  transition: background 0.2s ease, color 0.2s ease, transform 0.15s ease;
 }
 
 .dc-nav-item:hover {
-  background: #e3d3b3;
+  background: rgba(79, 160, 120, 0.12);
+  color: var(--retro-accent-dark);
+  transform: translateY(-1px);
 }
 
 .dc-nav-item--active {
-  background: #d7c49a;
+  background: rgba(79, 160, 120, 0.18);
   font-weight: 600;
+  color: var(--retro-accent-dark);
   border-left: 3px solid var(--retro-accent);
 }
 
@@ -76,16 +84,17 @@ html,#root {
   flex: 1;
   display: flex;
   flex-direction: column;
-  background: var(--retro-bg);
+  background: linear-gradient(180deg, #f6f7f3 0%, #eef2ea 100%);
 }
 
 .dc-admin-header {
-  background: #f0e2c0;
+  background: #ffffff;
   border-bottom: 1px solid var(--retro-border);
   padding: 0 24px;
   height: 64px;
   display: flex;
   align-items: center;
+  box-shadow: 0 8px 22px rgba(15, 23, 15, 0.06);
 }
 
 .dc-admin-title {
@@ -105,79 +114,83 @@ html,#root {
 .dc-status-card {
   background: var(--retro-panel);
   border: 1px solid var(--retro-border);
-  border-radius: 4px;
-  padding: 18px;
+  border-radius: var(--retro-radius);
+  padding: 20px;
   margin-bottom: 16px;
-  box-shadow: 0 1px 0 #e0d2b8;
+  box-shadow: var(--retro-shadow);
 }
 
 .dc-card-title,
 .dc-card-head {
-  background: #efe0c2;
-  border-bottom: 1px solid var(--retro-border-strong);
-  padding: 6px 10px;
-  margin: -18px -18px 12px;
-  font-weight: 600;
-  color: var(--retro-text);
+  background: rgba(120, 185, 133, 0.08);
+  border-bottom: 1px solid var(--retro-border);
+  padding: 10px 12px;
+  margin: -20px -20px 14px;
+  font-weight: 700;
+  color: var(--retro-accent-dark);
 }
 
 .dc-btn,
 .dc-btn-primary {
-  background: var(--retro-accent);
-  border: 2px solid var(--retro-accent-dark);
-  color: #fff;
-  padding: 6px 14px;
-  border-radius: 2px;
-  font-weight: 600;
+  background: linear-gradient(120deg, var(--retro-accent-dark), var(--retro-accent));
+  border: 1px solid transparent;
+  color: #ffffff;
+  padding: 10px 16px;
+  border-radius: var(--retro-radius);
+  font-weight: 700;
   cursor: pointer;
-  box-shadow: 0 2px 0 #123f7a;
+  box-shadow: 0 8px 20px rgba(31, 140, 90, 0.25);
 }
 
 .dc-btn:hover,
 .dc-btn-primary:hover {
-  background: #1f66c2;
+  background: linear-gradient(120deg, #1f8c5a, #59ba88);
+  box-shadow: 0 12px 26px rgba(31, 140, 90, 0.3);
 }
 
 .dc-btn:active,
 .dc-btn-primary:active {
   transform: translateY(1px);
-  box-shadow: 0 1px 0 #123f7a;
+  box-shadow: 0 6px 16px rgba(31, 140, 90, 0.22);
 }
 
 .dc-btn-outline,
 .dc-btn-back {
-  background: var(--retro-bg);
-  border: 1px solid #8c7a5a;
+  background: #ffffff;
+  border: 1px solid var(--retro-border);
   color: var(--retro-text);
-  padding: 6px 12px;
-  border-radius: 2px;
+  padding: 8px 14px;
+  border-radius: var(--retro-radius);
+  box-shadow: 0 8px 18px rgba(15, 23, 15, 0.06);
 }
 
 .dc-btn-outline:hover {
-  background: #efe0c2;
+  background: rgba(120, 185, 133, 0.08);
+  border-color: var(--retro-accent);
 }
 
 input,
 select,
 textarea {
-  border: 1px solid #b8a68a;
-  background: #fffdf5;
-  border-radius: 2px;
-  padding: 4px 8px;
-  color: #333;
-  font-size: 0.9rem;
+  border: 1px solid var(--retro-border);
+  background: #ffffff;
+  border-radius: 10px;
+  padding: 10px 12px;
+  color: var(--retro-text);
+  font-size: 0.95rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 input:focus,
 select:focus,
 textarea:focus {
-  outline: 2px solid var(--retro-accent);
-  outline-offset: 1px;
+  outline: none;
   border-color: var(--retro-accent);
+  box-shadow: 0 0 0 3px rgba(79, 160, 120, 0.25);
 }
 
 ::placeholder {
-  color: #9b8d73;
+  color: rgba(15, 31, 23, 0.45);
 }
 
 .dc-table-wrap {
@@ -605,6 +618,9 @@ textarea:focus {
 }
 .admin-reservations-page {
   padding: 16px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .admin-reservations-header {
@@ -633,11 +649,11 @@ textarea:focus {
 }
 
 .admin-reservations-table-wrapper {
-  border: 1px solid #d6c8aa;
-  border-radius: 6px;
-  background: #fffdf5;
-  padding: 16px;
-  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.03);
+  border: 1px solid var(--retro-border);
+  border-radius: var(--retro-radius);
+  background: #ffffff;
+  padding: 20px;
+  box-shadow: var(--retro-shadow);
 }
 
 .admin-card-list {
@@ -648,13 +664,14 @@ textarea:focus {
 }
 
 .reservation-detail-card {
-  background: #fff8eb;
-  border: 1px solid #d6c8aa;
-  border-radius: 8px;
-  padding: 16px;
+  background: #ffffff;
+  border: 1px solid var(--retro-border);
+  border-radius: var(--retro-radius);
+  padding: 18px;
   display: flex;
   flex-direction: column;
   gap: 8px;
+  box-shadow: 0 10px 24px rgba(15, 23, 15, 0.08);
 }
 
 .reservation-detail-card__header {
