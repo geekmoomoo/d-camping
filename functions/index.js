@@ -583,6 +583,43 @@ app.get("/reservations/disabled-dates", async (req, res) => {
   }
 });
 
+// 예약 조회: POST /api/reservations/lookup
+app.post("/reservations/lookup", async (req, res) => {
+  const reservationId = trimToNull(req.body?.reservationId);
+  const phone = trimToNull(req.body?.phone);
+
+  if (!reservationId || !phone) {
+    return res
+      .status(400)
+      .json({ error: "reservationId and phone required" });
+  }
+
+  try {
+    const snap = await reservationsRef
+      .where("reservationId", "==", reservationId)
+      .where("phone", "==", phone)
+      .limit(1)
+      .get();
+
+    if (snap.empty) {
+      return res.json({ ok: true, found: false });
+    }
+
+    const doc = snap.docs[0];
+    return res.json({
+      ok: true,
+      found: true,
+      reservationId: doc.id,
+      data: doc.data(),
+    });
+  } catch (err) {
+    console.error("[LOOKUP] error", err);
+    return res
+      .status(500)
+      .json({ error: "FAILED_TO_LOOKUP_RESERVATION" });
+  }
+});
+
 // 결제 준비: POST /payments/ready
 app.post("/payments/ready", async (req, res) => {
   try {
