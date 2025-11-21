@@ -336,7 +336,7 @@ p {
   content: "";
   position: absolute;
   inset: var(--dc-header-height) 0 0 0;
-  background: linear-gradient(180deg, rgba(8, 66, 6, 0.801), rgba(233, 200, 173, 0.6));
+  background: linear-gradient(180deg, rgba(61, 63, 61, 0.849), rgba(97, 96, 96, 0.6));
   backdrop-filter: blur(50px) saturate(175%) brightness(1.05);
   -webkit-backdrop-filter: blur(50px) saturate(175%) brightness(1.05);
   pointer-events: none;
@@ -1590,10 +1590,18 @@ p {
   transition: border-color 0.2s ease, color 0.2s ease;
 }
 
+.dc-qb-sheet-mode .mode-btn.pending {
+  color: var(--dc-muted);
+}
+
 .dc-qb-sheet-mode .mode-btn.active {
   border-color: var(--dc-accent);
   color: var(--dc-accent);
   background: rgba(120, 185, 133, 0.12);
+}
+
+.dc-qb-sheet-mode .mode-btn.pending.active {
+  color: var(--dc-accent);
 }
 
 .dc-qb-sheet-people-summary {
@@ -1732,15 +1740,15 @@ p {
   width: 100%;
   border-radius: var(--dc-radius-md);
   padding: 14px 0;
-  background: linear-gradient(120deg, var(--dc-accent), var(--dc-accent-strong));
-  color: #031107;
+  background: var(--dc-accent-strong);
+  color: #ffffff;
   font-weight: 700;
   letter-spacing: 0.04em;
 }
 
 .dc-qb-sheet-btn:disabled {
   background: rgba(103, 132, 116, 0.5);
-  color: rgba(3, 17, 7, 0.65);
+  color: rgba(255, 255, 255, 0.7);
   cursor: not-allowed;
 }
 

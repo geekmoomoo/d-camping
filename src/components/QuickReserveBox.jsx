@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { compareISO, diffDays, parseISO } from "../utils/date";
 import SiteTypeButton from "./SiteTypeButton";
 
@@ -46,6 +46,21 @@ function QuickReserveBox({ onNext }) {
   const [siteType, setSiteType] = useState("all");
   const [error, setError] = useState("");
   const [isDateSheetOpen, setIsDateSheetOpen] = useState(false);
+
+  useEffect(() => {
+    const body = document.body;
+    if (!body) return undefined;
+    const originalOverflow = body.style.overflow;
+    const originalTouchAction = body.style.touchAction;
+    if (isDateSheetOpen) {
+      body.style.overflow = "hidden";
+      body.style.touchAction = "none";
+    }
+    return () => {
+      body.style.overflow = originalOverflow;
+      body.style.touchAction = originalTouchAction;
+    };
+  }, [isDateSheetOpen]);
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -329,20 +344,22 @@ function QuickReserveBox({ onNext }) {
             </div>
 
             <div className="dc-qb-sheet-mode">
-              <button
-                type="button"
-                className={`mode-btn${!selectingCheckOut ? " active" : ""}`}
-                onClick={focusCheckIn}
-              >
-                입실일 선택
-              </button>
-              <button
-                type="button"
-                className={`mode-btn${selectingCheckOut ? " active" : ""}`}
-                onClick={focusCheckOut}
-              >
-                퇴실일 선택
-              </button>
+            <button
+              type="button"
+              className={`mode-btn${!selectingCheckOut ? " active" : ""}`}
+              onClick={focusCheckIn}
+            >
+              입실일 선택
+            </button>
+            <button
+              type="button"
+              className={`mode-btn${selectingCheckOut ? " active" : ""}${
+                !checkOut ? " pending" : ""
+              }`}
+              onClick={focusCheckOut}
+            >
+              퇴실일 선택
+            </button>
             </div>
 
             <QuickCalendarGrid
