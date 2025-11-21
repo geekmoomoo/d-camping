@@ -85,11 +85,11 @@ function CalendarGrid({
     <div className="dc-cal-wrap">
       <div className="dc-cal-header">
         <button type="button" className="dc-cal-nav" onClick={() => onMonthChange(-1)}>
-          {"<"}
+          {"\u25c0"}
         </button>
         <div className="dc-cal-month">{monthLabel}</div>
         <button type="button" className="dc-cal-nav" onClick={() => onMonthChange(1)}>
-          {">"}
+          {"\u25b6"}
         </button>
       </div>
       <div className="dc-cal-weekdays">
@@ -149,12 +149,6 @@ function CalendarGrid({
             </button>
           );
         })}
-      </div>
-      <div className="dc-cal-help">
-        {"입실 "}
-        {checkIn ? formatDateLabel(checkIn) : "-"}
-        {" / 퇴실 "}
-        {checkOut ? formatDateLabel(checkOut) : "-"}
       </div>
     </div>
   );

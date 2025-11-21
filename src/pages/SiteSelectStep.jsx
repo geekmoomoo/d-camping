@@ -77,6 +77,15 @@ function SiteSelectStep({ data, onChangeFilter, onSelectSite }) {
     setIsDateSheetOpen(true);
   };
 
+  const focusCheckIn = () => {
+    setCheckOut(checkOut || "");
+  };
+
+  const focusCheckOut = () => {
+    if (!checkIn) return;
+    setCheckOut(checkOut || "");
+  };
+
   const closeSheets = () => {
     setIsDateSheetOpen(false);
   };
@@ -130,7 +139,6 @@ function SiteSelectStep({ data, onChangeFilter, onSelectSite }) {
   const handleDateConfirm = () => {
     closeSheets();
   };
-
 
   const [siteList, setSiteList] = useState([]);
   const [siteAvailability, setSiteAvailability] = useState({});
@@ -242,7 +250,7 @@ function SiteSelectStep({ data, onChangeFilter, onSelectSite }) {
       <span className="dc-stay-highlight">
         {stayNights}박 {stayNights + 1}일
       </span>{" "}
-      적용하기
+      예약하기
     </>
   ) : (
     "날짜를 선택해주세요"
@@ -471,31 +479,23 @@ function SiteSelectStep({ data, onChangeFilter, onSelectSite }) {
               </button>
             </div>
 
-            <div className="dc-qb-date-tabs">
-              <div className="active">
-                {checkIn ? (
-                  <>
-                    입실일{" "}
-                    <span className="dc-qb-date-highlight">
-                      {formatDateLabel(checkIn)}
-                    </span>
-                  </>
-                ) : (
-                  "입실일 선택"
-                )}
-              </div>
-              <div className="active">
-                {checkOut ? (
-                  <>
-                    퇴실일{" "}
-                    <span className="dc-qb-date-highlight">
-                      {formatDateLabel(checkOut)}
-                    </span>
-                  </>
-                ) : (
-                  "퇴실일 선택"
-                )}
-              </div>
+            <div className="dc-qb-sheet-mode">
+              <button
+                type="button"
+                className={`mode-btn${!selectingCheckOut ? " active" : ""}`}
+                onClick={focusCheckIn}
+              >
+                입실일 선택
+              </button>
+              <button
+                type="button"
+                className={`mode-btn${selectingCheckOut ? " active" : ""}${
+                  !checkIn ? " pending" : ""
+                }`}
+                onClick={focusCheckOut}
+              >
+                퇴실일 선택
+              </button>
             </div>
 
             <CalendarGrid
@@ -515,8 +515,7 @@ function SiteSelectStep({ data, onChangeFilter, onSelectSite }) {
             />
 
             <div className="dc-qb-sheet-sub">
-              <span className="dc-text-orange">유아 및 아동</span>도 인원수에{" "}
-              <span className="dc-text-orange">포함</span>해 주세요.
+              36개월 이상 아동 포함
             </div>
             <div className="dc-qb-people-row">
               <span>인원</span>
